@@ -14,7 +14,7 @@ namespace RogueEssence.Menu
         private static int defaultChoice;
 
         private const int SLOTS_PER_PAGE = 12;
-        
+
         /// <summary>
         /// The slot chosen out of the Choosable forms, not actual slot in the form list
         /// </summary>
@@ -27,12 +27,16 @@ namespace RogueEssence.Menu
         public SpeakerPortrait Portrait;
         private List<string> startChars;
         private RogueConfig config;
+        private bool forPartner;
 
-        public CharaChoiceMenu(RogueConfig config) : this(MenuLabel.ROGUE_CHAR_MENU, config) { }
-        public CharaChoiceMenu(string label, RogueConfig config)
+        public CharaChoiceMenu(RogueConfig config) : this(MenuLabel.ROGUE_CHAR_MENU, config, false) { }
+        public CharaChoiceMenu(RogueConfig config, bool forPartner) : this(MenuLabel.ROGUE_CHAR_MENU, config, forPartner) { }
+        public CharaChoiceMenu(string label, RogueConfig config) : this(label, config, false) { }
+        public CharaChoiceMenu(string label, RogueConfig config, bool forPartner)
         {
             Label = label;
             this.config = config;
+            this.forPartner = forPartner;
             GenderSetting = Gender.Unknown;
             SkinSetting = DataManager.Instance.DefaultSkin;
             IntrinsicSetting = -1;
@@ -180,20 +184,35 @@ namespace RogueEssence.Menu
 
         private void start(int choice, string name)
         {
-            MenuManager.Instance.ClearMenus();
-            GameManager.Instance.SceneOutcome = Begin(choice, name);
+            if (forPartner)
+            {
+                MenuManager.Instance.ClearMenus();
+                GameManager.Instance.SceneOutcome = Begin(choice, name);
+            }
+            else
+            {
+                // First chara = player. Stash its settings on config, then chain into partner choice.
+                config.IntrinsicSetting = IntrinsicSetting;
+                config.FormSetting = FormSetting;
+                config.GenderSetting = GenderSetting;
+                config.SkinSetting = SkinSetting;
+                config.Nickname = name;
+                config.Starter = startChars[choice];
+                MenuManager.Instance.ReplaceMenu(new CharaChoiceMenu(config, true));
+            }
         }
-        
+
         public IEnumerator<YieldInstruction> Begin(int choice, string name)
         {
-            string starter = startChars[choice];
-            config.IntrinsicSetting = IntrinsicSetting;
-            config.FormSetting = FormSetting;
-            config.GenderSetting= GenderSetting;
-            config.SkinSetting = SkinSetting;
-            config.Nickname = name;
-            config.Starter = starter;
-            
+            // Only reachable in forPartner mode: stash partner settings and launch.
+            string partner = startChars[choice];
+            config.PartnerIntrinsicSetting = IntrinsicSetting;
+            config.PartnerFormSetting = FormSetting;
+            config.PartnerGenderSetting = GenderSetting;
+            config.PartnerSkinSetting = SkinSetting;
+            config.PartnerNickname = name;
+            config.Partner = partner;
+
             return RogueProgress.StartRogue(config);
         }
 

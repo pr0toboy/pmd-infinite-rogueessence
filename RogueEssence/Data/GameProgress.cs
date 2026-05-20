@@ -1635,6 +1635,37 @@ namespace RogueEssence.Data
             newChar.Nickname = config.Nickname;
             DataManager.Instance.Save.ActiveTeam.Players.Add(newChar);
 
+            if (config.Partner != null)
+            {
+                MonsterData pData = DataManager.Instance.GetMonster(config.Partner);
+                int pFormSlot = config.PartnerFormSetting;
+                List<int> pForms = CharaDetailMenu.GetPossibleForms(pData);
+                if (pFormSlot >= pForms.Count)
+                    pFormSlot = pForms.Count - 1;
+                if (pFormSlot == -1)
+                    pFormSlot = MathUtils.Rand.Next(pForms.Count);
+                int pFormIndex = pForms[pFormSlot];
+
+                Gender pGender = CharaDetailMenu.LimitGender(pData, pFormIndex, config.PartnerGenderSetting);
+                if (pGender == Gender.Unknown)
+                    pGender = pData.Forms[pFormIndex].RollGender(MathUtils.Rand);
+
+                int pIntrinsicSlot = CharaDetailMenu.LimitIntrinsic(pData, pFormIndex, config.PartnerIntrinsicSetting);
+                string pIntrinsic;
+                if (pIntrinsicSlot == -1)
+                    pIntrinsic = pData.Forms[pFormIndex].RollIntrinsic(MathUtils.Rand, 3);
+                else if (pIntrinsicSlot == 0)
+                    pIntrinsic = pData.Forms[pFormIndex].Intrinsic1;
+                else if (pIntrinsicSlot == 1)
+                    pIntrinsic = pData.Forms[pFormIndex].Intrinsic2;
+                else
+                    pIntrinsic = pData.Forms[pFormIndex].Intrinsic3;
+
+                Character partnerChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Partner, pFormIndex, config.PartnerSkinSetting ?? DataManager.Instance.DefaultSkin, pGender), DataManager.Instance.Start.Level, pIntrinsic, DataManager.Instance.Start.Personality);
+                partnerChar.Nickname = config.PartnerNickname;
+                DataManager.Instance.Save.ActiveTeam.Players.Add(partnerChar);
+            }
+
             try
             {
                 LuaEngine.Instance.OnNewGame();
@@ -1666,6 +1697,15 @@ namespace RogueEssence.Data
         public string SkinSetting;
         public string Nickname;
 
+        // Optional second team member. Partner == null = single-starter run (vanilla).
+        public string Partner;
+        public bool PartnerRandomized;
+        public int PartnerIntrinsicSetting = -1;
+        public int PartnerFormSetting = -1;
+        public Gender PartnerGenderSetting = Gender.Unknown;
+        public string PartnerSkinSetting;
+        public string PartnerNickname = "";
+
         public RogueConfig()
         {
         }
@@ -1685,6 +1725,13 @@ namespace RogueEssence.Data
             SeedRandomized = other.SeedRandomized;
             SkinSetting = other.SkinSetting;
             Nickname = other.Nickname;
+            Partner = other.Partner;
+            PartnerRandomized = other.PartnerRandomized;
+            PartnerIntrinsicSetting = other.PartnerIntrinsicSetting;
+            PartnerFormSetting = other.PartnerFormSetting;
+            PartnerGenderSetting = other.PartnerGenderSetting;
+            PartnerSkinSetting = other.PartnerSkinSetting;
+            PartnerNickname = other.PartnerNickname;
         }
 
         public static RogueConfig RerollFromOther(RogueConfig oldConfig)
@@ -1704,6 +1751,14 @@ namespace RogueEssence.Data
                 config.IntrinsicSetting = -1;
                 config.FormSetting = -1;
                 config.GenderSetting = Gender.Unknown;
+            }
+            if (config.PartnerRandomized && config.Partner != null)
+            {
+                List<string> starters = CharaChoiceMenu.GetStartersList();
+                config.Partner = starters[MathUtils.Rand.Next(starters.Count)];
+                config.PartnerIntrinsicSetting = -1;
+                config.PartnerFormSetting = -1;
+                config.PartnerGenderSetting = Gender.Unknown;
             }
             if (config.DestinationRandomized)
             {
