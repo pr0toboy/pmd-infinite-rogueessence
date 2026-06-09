@@ -198,7 +198,9 @@ namespace RogueEssence.Menu
                 config.SkinSetting = SkinSetting;
                 config.Nickname = name;
                 config.Starter = startChars[choice];
-                MenuManager.Instance.ReplaceMenu(new CharaChoiceMenu(config, true));
+                // choose()'s nickname callback already cleared the menu stack, so AddMenu (not ReplaceMenu,
+                // which dereferences menus[menus.Count-1] on an empty stack -> IndexOutOfRange).
+                MenuManager.Instance.AddMenu(new CharaChoiceMenu(config, true), false);
             }
         }
 
