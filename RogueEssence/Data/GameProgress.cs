@@ -1642,6 +1642,19 @@ namespace RogueEssence.Data
             }
         }
 
+        /// <summary>
+        /// Méta-progression : vrai si la zone a un checkpoint débloqué ET une équipe
+        /// sauvegardée à réinjecter — la reprise saute alors le choix du starter.
+        /// </summary>
+        public static bool CanResumeAtCheckpoint(string zoneID)
+        {
+            GameState state = DataManager.Instance.LoadMainGameState(false);
+            MainProgress main = (state != null) ? state.Save as MainProgress : null;
+            if (main == null || main.RogueCheckpoints == null || main.CharsToStore.Count == 0)
+                return false;
+            return main.RogueCheckpoints.TryGetValue(zoneID, out int seg) && seg > 0;
+        }
+
         public static IEnumerator<YieldInstruction> StartRogue(RogueConfig config)
         {
             DataManager.Instance.PreLoadZone(config.Destination);
@@ -1656,6 +1669,52 @@ namespace RogueEssence.Data
             DataManager.Instance.Save.ActiveTeam = new ExplorerTeam();
             DataManager.Instance.Save.ActiveTeam.Name = config.TeamName;
 
+            // Méta-progression : reprise au dernier checkpoint débloqué (persisté
+            // dans le MainProgress). startSeg 0 = nouvelle progression (segment 0).
+            int startSeg = config.StartSegment;
+            GameState metaState = DataManager.Instance.LoadMainGameState(false);
+            MainProgress metaMain = (metaState != null) ? metaState.Save as MainProgress : null;
+            if (metaMain != null && metaMain.RogueCheckpoints != null && metaMain.RogueCheckpoints.TryGetValue(config.Destination, out int ckpt))
+                startSeg = Math.Max(startSeg, ckpt);
+            // Reprise = checkpoint passé ET une équipe sauvegardée à réinjecter.
+            // Sans équipe stockée (vieux save, files déjà consommées), on retombe
+            // sur le flux starter normal mais on démarre quand même au checkpoint.
+            bool resuming = startSeg > 0 && metaMain != null && metaMain.CharsToStore.Count > 0;
+
+            if (resuming)
+            {
+                // b2bis : réinjecter l'équipe conservée à la mort (logique MergeDataTo,
+                // mais vers la run rogue) — 1er = leader, le reste en Assembly.
+                // Character(CharData) repart à HP = MaxHP.
+                foreach (CharData charData in metaMain.CharsToStore)
+                {
+                    Character chara = new Character(charData);
+                    AITactic tactic = DataManager.Instance.GetAITactic(DataManager.Instance.DefaultAI);
+                    chara.Tactic = new AITactic(tactic);
+                    if (DataManager.Instance.Save.ActiveTeam.Players.Count == 0)
+                        DataManager.Instance.Save.ActiveTeam.Players.Add(chara);
+                    else
+                        DataManager.Instance.Save.ActiveTeam.Assembly.Add(chara);
+                }
+                metaMain.CharsToStore.Clear();
+
+                DataManager.Instance.Save.ActiveTeam.StoreItems(metaMain.ItemsToStore);
+                metaMain.ItemsToStore.Clear();
+
+                foreach (string key in metaMain.StorageToStore.Keys)
+                    DataManager.Instance.Save.ActiveTeam.Storage[key] = metaMain.StorageToStore[key] + DataManager.Instance.Save.ActiveTeam.Storage.GetValueOrDefault(key, 0);
+                metaMain.StorageToStore.Clear();
+
+                DataManager.Instance.Save.ActiveTeam.Bank += metaMain.MoneyToStore;
+                metaMain.MoneyToStore = 0;
+
+                // Files consommées : persister le MainProgress, sinon le prochain
+                // chargement du save principal restaurerait l'équipe une 2e fois.
+                DataManager.Instance.SaveGameState(metaState);
+                DiagManager.Instance.LogInfo(String.Format("[meta-resume] team restored at segment {0}: {1} chars", startSeg, DataManager.Instance.Save.ActiveTeam.Players.Count + DataManager.Instance.Save.ActiveTeam.Assembly.Count));
+            }
+            else
+            {
             MonsterData monsterData = DataManager.Instance.GetMonster(config.Starter);
 
             int formSlot = config.FormSetting;
@@ -1722,6 +1781,7 @@ namespace RogueEssence.Data
                 partnerChar.IsPartner = true;
                 DataManager.Instance.Save.ActiveTeam.Players.Add(partnerChar);
             }
+            }
 
             try
             {
@@ -1734,13 +1794,6 @@ namespace RogueEssence.Data
                 DiagManager.Instance.LogError(ex);
             }
             
-            // Méta-progression : reprise au dernier checkpoint débloqué (persisté
-            // dans le MainProgress). startSeg 0 = nouvelle progression (segment 0).
-            int startSeg = config.StartSegment;
-            GameState metaState = DataManager.Instance.LoadMainGameState(false);
-            if (metaState != null && metaState.Save is MainProgress metaMain && metaMain.RogueCheckpoints != null)
-                metaMain.RogueCheckpoints.TryGetValue(config.Destination, out startSeg);
-
             yield return CoroutineManager.Instance.StartCoroutine(GameManager.Instance.BeginGameInSegment(new ZoneLoc(config.Destination, new SegLoc(startSeg, 0)), GameProgress.DungeonStakes.Risk, true, false));
         }
     }

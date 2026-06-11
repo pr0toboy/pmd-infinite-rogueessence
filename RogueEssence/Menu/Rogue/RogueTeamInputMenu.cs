@@ -59,7 +59,16 @@ namespace RogueEssence.Menu
 
             config.TeamName = Text.Text;
             config.TeamRandomized = randomized;
-            MenuManager.Instance.AddMenu(new CharaChoiceMenu(config), false);
+            // Méta-progression : à la reprise (checkpoint débloqué + équipe conservée),
+            // pas de nouveau starter — StartRogue restaure l'ancienne équipe et
+            // démarre au segment du checkpoint.
+            if (RogueProgress.CanResumeAtCheckpoint(config.Destination))
+            {
+                MenuManager.Instance.ClearMenus();
+                GameManager.Instance.SceneOutcome = RogueProgress.StartRogue(config);
+            }
+            else
+                MenuManager.Instance.AddMenu(new CharaChoiceMenu(config), false);
         }
     }
 }
