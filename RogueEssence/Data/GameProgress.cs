@@ -1633,6 +1633,10 @@ namespace RogueEssence.Data
 
             Character newChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Starter, formIndex, config.SkinSetting, gender), DataManager.Instance.Start.Level, intrinsic, DataManager.Instance.Start.Personality);
             newChar.Nickname = config.Nickname;
+            // M3: mark the founding duo so partner-aware mechanics (AllyDeathCheck,
+            // send-home protection in TeamMenu) can distinguish them from recruits.
+            newChar.IsFounder = true;
+            newChar.IsPartner = true;
             DataManager.Instance.Save.ActiveTeam.Players.Add(newChar);
 
             if (config.Partner != null)
@@ -1663,6 +1667,8 @@ namespace RogueEssence.Data
 
                 Character partnerChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Partner, pFormIndex, config.PartnerSkinSetting ?? DataManager.Instance.DefaultSkin, pGender), DataManager.Instance.Start.Level, pIntrinsic, DataManager.Instance.Start.Personality);
                 partnerChar.Nickname = config.PartnerNickname;
+                partnerChar.IsFounder = true;
+                partnerChar.IsPartner = true;
                 DataManager.Instance.Save.ActiveTeam.Players.Add(partnerChar);
             }
 
