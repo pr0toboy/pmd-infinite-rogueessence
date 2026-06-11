@@ -32,6 +32,9 @@ namespace RogueEssence.Menu
                 && DataManager.Instance.DataIndices[DataManager.DataType.Zone].ContainsKey(INFINITE_DUNGEON_ZONE))
             {
                 bool canResume = RogueProgress.CanResumeAtCheckpoint(INFINITE_DUNGEON_ZONE);
+                // run en cours sauvegardée (save&quit à une halte ou en donjon)
+                if (DataManager.Instance.FoundRecords(PathMod.ModSavePath(DataManager.ROGUE_PATH), DataManager.QUICKSAVE_EXTENSION))
+                    choices.Add(new MenuTextChoice("Continuer l'expédition", () => { MenuManager.Instance.AddMenu(new QuicksaveMenu(), false); }));
                 choices.Add(new MenuTextChoice("Nouvelle aventure", () => { startInfiniteRun(canResume); }));
                 if (canResume)
                     choices.Add(new MenuTextChoice("Reprendre l'expédition", resumeInfiniteRun));
