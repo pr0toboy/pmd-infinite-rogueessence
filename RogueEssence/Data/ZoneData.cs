@@ -25,7 +25,13 @@ namespace RogueEssence.Data
         /// <summary>
         /// Allowed for rogue mode, can transfer items and characters to main save.
         /// </summary>
-        AllTransfer
+        AllTransfer,
+        /// <summary>
+        /// Roguelite à méta-progression : à la MORT, conserve automatiquement
+        /// l'équipe + recrues + stockage + banque (l'inventaire et l'argent PORTÉS
+        /// sont perdus), pour une reprise au dernier checkpoint débloqué.
+        /// </summary>
+        MetaProgress
     }
 
     public interface IZoneData : IEntryData

@@ -1456,6 +1456,30 @@ namespace RogueEssence.Data
                 if (state != null)
                 {
                     newRecruits = MergeDexTo(state.Save, false);
+
+                    // Méta-progression roguelite : à la MORT, conserver l'équipe +
+                    // recrues + stockage + banque (l'inventaire et l'argent PORTÉS sont
+                    // perdus). Au prochain démarrage, MainProgress restaure ces éléments
+                    // (CharsToStore/StorageToStore/MoneyToStore) -> reprise au checkpoint.
+                    ZoneData metaZone = DataManager.Instance.GetZone(ZoneManager.Instance.CurrentZoneID);
+                    if (metaZone != null && metaZone.Rogue == RogueStatus.MetaProgress && state.Save is MainProgress metaSave)
+                    {
+                        foreach (Character character in ActiveTeam.Players)
+                        {
+                            if (!(character.Dead && DataManager.Instance.GetSkin(character.BaseForm.Skin).Challenge))
+                                metaSave.CharsToStore.Add(new CharData(character));
+                        }
+                        foreach (Character character in ActiveTeam.Assembly)
+                        {
+                            if (!(character.Dead && DataManager.Instance.GetSkin(character.BaseForm.Skin).Challenge))
+                                metaSave.CharsToStore.Add(new CharData(character));
+                        }
+                        foreach (InvItem item in ActiveTeam.BoxStorage)
+                            metaSave.ItemsToStore.Add(item);
+                        metaSave.StorageToStore = ActiveTeam.Storage;
+                        metaSave.MoneyToStore = ActiveTeam.Bank;   // banque conservée ; argent porté perdu
+                    }
+
                     DataManager.Instance.SaveGameState(state);
                 }
 
