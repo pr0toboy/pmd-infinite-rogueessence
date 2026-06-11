@@ -1422,7 +1422,12 @@ namespace RogueEssence.Data
             Stakes = stakes;
             Outcome = ResultType.Unknown;
 
-            yield return CoroutineManager.Instance.StartCoroutine(RestrictLevel(zone.Level, false, true, true, false));
+            // Méta-progression : à la reprise au checkpoint, l'équipe restaurée GARDE
+            // ses niveaux/skills — ne pas l'écraser au niveau de la zone (=1).
+            if (Config != null && Config.MetaResume)
+                StartLevel = zone.Level;
+            else
+                yield return CoroutineManager.Instance.StartCoroutine(RestrictLevel(zone.Level, false, true, true, false));
 
             BeginSession();
 
@@ -1474,6 +1479,13 @@ namespace RogueEssence.Data
                     DiagManager.Instance.LogInfo("[meta-hang] GetZone done, rogue=" + (metaZone == null ? "nullzone" : metaZone.Rogue.ToString()));
                     if (metaZone != null && metaZone.Rogue == RogueStatus.MetaProgress && state.Save is MainProgress metaSave)
                     {
+                        // Les files représentent l'ÉTAT retenu (dernière mort), pas une
+                        // accumulation : on les vide d'abord, sinon des morts répétées
+                        // sans reprise consommée empilent des équipes en doublon.
+                        metaSave.CharsToStore.Clear();
+                        metaSave.ItemsToStore.Clear();
+                        metaSave.MoneyToStore = 0;
+
                         foreach (Character character in ActiveTeam.Players)
                         {
                             if (!(character.Dead && DataManager.Instance.GetSkin(character.BaseForm.Skin).Challenge))
@@ -1643,8 +1655,9 @@ namespace RogueEssence.Data
         }
 
         /// <summary>
-        /// Méta-progression : vrai si la zone a un checkpoint débloqué ET une équipe
-        /// sauvegardée à réinjecter — la reprise saute alors le choix du starter.
+        /// Méta-progression : vrai si une mort méta a écrit un checkpoint pour la
+        /// zone (même segment 0) ET qu'une équipe sauvegardée est à réinjecter —
+        /// la reprise saute alors le choix du starter.
         /// </summary>
         public static bool CanResumeAtCheckpoint(string zoneID)
         {
@@ -1652,7 +1665,7 @@ namespace RogueEssence.Data
             MainProgress main = (state != null) ? state.Save as MainProgress : null;
             if (main == null || main.RogueCheckpoints == null || main.CharsToStore.Count == 0)
                 return false;
-            return main.RogueCheckpoints.TryGetValue(zoneID, out int seg) && seg > 0;
+            return main.RogueCheckpoints.ContainsKey(zoneID);
         }
 
         public static IEnumerator<YieldInstruction> StartRogue(RogueConfig config)
@@ -1674,12 +1687,20 @@ namespace RogueEssence.Data
             int startSeg = config.StartSegment;
             GameState metaState = DataManager.Instance.LoadMainGameState(false);
             MainProgress metaMain = (metaState != null) ? metaState.Save as MainProgress : null;
+            // Le checkpoint n'existe (même à 0) que si une mort MetaProgress l'a écrit.
+            bool hasCheckpoint = false;
             if (metaMain != null && metaMain.RogueCheckpoints != null && metaMain.RogueCheckpoints.TryGetValue(config.Destination, out int ckpt))
+            {
+                hasCheckpoint = true;
                 startSeg = Math.Max(startSeg, ckpt);
-            // Reprise = checkpoint passé ET une équipe sauvegardée à réinjecter.
-            // Sans équipe stockée (vieux save, files déjà consommées), on retombe
-            // sur le flux starter normal mais on démarre quand même au checkpoint.
-            bool resuming = startSeg > 0 && metaMain != null && metaMain.CharsToStore.Count > 0;
+            }
+            // Reprise = une mort méta a eu lieu ET une équipe sauvegardée est à
+            // réinjecter — même au checkpoint 0 (mort au 1er donjon : on garde
+            // l'équipe, design « rétention à la mort »). Sans équipe stockée
+            // (vieux save, files déjà consommées), flux starter normal mais on
+            // démarre quand même au checkpoint.
+            bool resuming = hasCheckpoint && metaMain.CharsToStore.Count > 0;
+            config.MetaResume = resuming;
 
             if (resuming)
             {
@@ -1804,6 +1825,9 @@ namespace RogueEssence.Data
         public bool DestinationRandomized;
         public string TeamName;
         public bool TeamRandomized;
+        // Méta-progression : run de reprise (équipe restaurée, pas de restriction
+        // de niveau, pas de starter). Posé par StartRogue.
+        public bool MetaResume;
         public string Starter;
         public bool StarterRandomized;
         public int IntrinsicSetting;

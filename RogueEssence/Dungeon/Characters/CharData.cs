@@ -141,8 +141,10 @@ namespace RogueEssence.Dungeon
         {
             //clean variables
             Nickname = other.Nickname;
+            NameLocked = other.NameLocked;
             BaseForm = other.BaseForm;
             Level = other.Level;
+            EXP = other.EXP;
 
             MaxHPBonus = other.MaxHPBonus;
             AtkBonus = other.AtkBonus;
@@ -169,6 +171,7 @@ namespace RogueEssence.Dungeon
             DefeatAt = other.DefeatAt;
             DefeatLoc = other.DefeatLoc;
             IsFounder = other.IsFounder;
+            IsPartner = other.IsPartner;
             IsFavorite = other.IsFavorite;
             Discriminator = other.Discriminator;
 
