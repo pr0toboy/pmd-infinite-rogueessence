@@ -191,16 +191,19 @@ namespace RogueEssence.Menu
             }
             else
             {
-                // First chara = player. Stash its settings on config, then chain into partner choice.
+                // Sole chara = player. Stash its settings on config and launch solo.
                 config.IntrinsicSetting = IntrinsicSetting;
                 config.FormSetting = FormSetting;
                 config.GenderSetting = GenderSetting;
                 config.SkinSetting = SkinSetting;
                 config.Nickname = name;
                 config.Starter = startChars[choice];
-                // choose()'s nickname callback already cleared the menu stack, so AddMenu (not ReplaceMenu,
-                // which dereferences menus[menus.Count-1] on an empty stack -> IndexOutOfRange).
-                MenuManager.Instance.AddMenu(new CharaChoiceMenu(config, true), false);
+                // M3 (Alexis 2026-06-11): solo start, no partner. Launch directly instead of
+                // chaining into the partner CharaChoiceMenu. The forPartner branch (Begin) stays
+                // in place so an optional partner flow can be re-enabled later if wanted.
+                config.Partner = null;
+                MenuManager.Instance.ClearMenus();
+                GameManager.Instance.SceneOutcome = RogueProgress.StartRogue(config);
             }
         }
 
