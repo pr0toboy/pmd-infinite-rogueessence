@@ -1116,12 +1116,17 @@ namespace RogueEssence.Data
         public Dictionary<string, int> StorageToStore;
         public int MoneyToStore;
 
+        // Méta-progression roguelite : dernier checkpoint (segment-donjon) débloqué
+        // par zone (zoneID -> segment de reprise). Survit aux runs (MainProgress).
+        public Dictionary<string, int> RogueCheckpoints;
+
         [JsonConstructor]
         public MainProgress()
         {
             CharsToStore = new List<CharData>();
             ItemsToStore = new List<InvItem>();
             StorageToStore = new Dictionary<string, int>();
+            RogueCheckpoints = new Dictionary<string, int>();
         }
 
         public MainProgress(ulong seed, string uuid)
@@ -1132,6 +1137,7 @@ namespace RogueEssence.Data
             CharsToStore = new List<CharData>();
             ItemsToStore = new List<InvItem>();
             StorageToStore = new Dictionary<string, int>();
+            RogueCheckpoints = new Dictionary<string, int>();
         }
         
         public override int GetTotalScore() { return 0; }
@@ -1478,6 +1484,18 @@ namespace RogueEssence.Data
                             metaSave.ItemsToStore.Add(item);
                         metaSave.StorageToStore = ActiveTeam.Storage;
                         metaSave.MoneyToStore = ActiveTeam.Bank;   // banque conservée ; argent porté perdu
+
+                        // Reprise au checkpoint : mémoriser le segment du donjon courant
+                        // (monotone) dans le MainProgress -> StartRogue y redémarre.
+                        if (metaSave.RogueCheckpoints == null)
+                            metaSave.RogueCheckpoints = new Dictionary<string, int>();
+                        string metaZoneID = ZoneManager.Instance.CurrentZoneID;
+                        int curSeg = ZoneManager.Instance.CurrentMapID.Segment;
+                        if (curSeg >= 0)
+                        {
+                            int prevSeg = metaSave.RogueCheckpoints.TryGetValue(metaZoneID, out int p) ? p : 0;
+                            metaSave.RogueCheckpoints[metaZoneID] = Math.Max(prevSeg, curSeg);
+                        }
                     }
 
                     DataManager.Instance.SaveGameState(state);
@@ -1707,7 +1725,14 @@ namespace RogueEssence.Data
                 DiagManager.Instance.LogError(ex);
             }
             
-            yield return CoroutineManager.Instance.StartCoroutine(GameManager.Instance.BeginGameInSegment(new ZoneLoc(config.Destination, new SegLoc()), GameProgress.DungeonStakes.Risk, true, false));
+            // Méta-progression : reprise au dernier checkpoint débloqué (persisté
+            // dans le MainProgress). startSeg 0 = nouvelle progression (segment 0).
+            int startSeg = config.StartSegment;
+            GameState metaState = DataManager.Instance.LoadMainGameState(false);
+            if (metaState != null && metaState.Save is MainProgress metaMain && metaMain.RogueCheckpoints != null)
+                metaMain.RogueCheckpoints.TryGetValue(config.Destination, out startSeg);
+
+            yield return CoroutineManager.Instance.StartCoroutine(GameManager.Instance.BeginGameInSegment(new ZoneLoc(config.Destination, new SegLoc(startSeg, 0)), GameProgress.DungeonStakes.Risk, true, false));
         }
     }
     
@@ -1726,6 +1751,11 @@ namespace RogueEssence.Data
         public bool SeedRandomized;
         public string SkinSetting;
         public string Nickname;
+
+        // Méta-progression : segment de départ de la run (0 = début ; N = reprise
+        // au checkpoint du donjon N débloqué). Renseigné par StartRogue depuis le
+        // MainProgress (RogueCheckpoints).
+        public int StartSegment = 0;
 
         // Optional second team member. Partner == null = single-starter run (vanilla).
         public string Partner;
@@ -1762,6 +1792,7 @@ namespace RogueEssence.Data
             PartnerGenderSetting = other.PartnerGenderSetting;
             PartnerSkinSetting = other.PartnerSkinSetting;
             PartnerNickname = other.PartnerNickname;
+            StartSegment = other.StartSegment;
         }
 
         public static RogueConfig RerollFromOther(RogueConfig oldConfig)
