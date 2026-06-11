@@ -221,8 +221,30 @@ namespace RogueEssence.Script
         /// </summary>
         ///  <param name="config">The configuration of the roguelocke run</param>
         public void RestartRogue(RogueConfig config)
-        { 
+        {
             GameManager.Instance.SceneOutcome = GameManager.Instance.RestartToRogue(config);
+        }
+
+        /// <summary>
+        /// Méta-progression : persiste le checkpoint d'une zone rogue dans le
+        /// save principal (monotone). Appelé par les scripts de halte quand le
+        /// joueur sécurise sa progression (la mort l'écrit déjà côté EndGame).
+        /// </summary>
+        /// <param name="zoneId">The id of the meta-progression zone.</param>
+        /// <param name="segment">The segment the next run should resume at.</param>
+        public void SetRogueCheckpoint(string zoneId, int segment)
+        {
+            if (segment < 0)
+                return;
+            GameState state = DataManager.Instance.LoadMainGameState(false);
+            if (state == null || !(state.Save is MainProgress metaSave))
+                return;
+            if (metaSave.RogueCheckpoints == null)
+                metaSave.RogueCheckpoints = new Dictionary<string, int>();
+            int prev = metaSave.RogueCheckpoints.TryGetValue(zoneId, out int p) ? p : 0;
+            metaSave.RogueCheckpoints[zoneId] = Math.Max(prev, segment);
+            DataManager.Instance.SaveGameState(state);
+            DiagManager.Instance.LogInfo(String.Format("[meta-resume] checkpoint {0} -> segment {1}", zoneId, metaSave.RogueCheckpoints[zoneId]));
         }
 
         /// <summary>
