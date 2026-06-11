@@ -16,12 +16,36 @@ namespace RogueEssence.Menu
         public override bool CanMenu { get { return false; } }
         public override bool CanCancel { get { return false; } }
         
+        // Fangame « Explorateurs de l'Infini » : quand la zone existe (mod
+        // chargé) et hors DevMode, le menu principal est réduit au flux du
+        // donjon infini (le menu vanilla reste accessible en -dev).
+        private const string INFINITE_DUNGEON_ZONE = "infinite_dungeon";
+
         public TopMenu() : this(MenuLabel.TOP_MENU) { }
         public TopMenu(string label)
         {
             Label = label;
             bool inQuest = PathMod.Quest.IsValid();
             List<MenuTextChoice> choices = new List<MenuTextChoice>();
+
+            if (!DiagManager.Instance.DevMode
+                && DataManager.Instance.DataIndices[DataManager.DataType.Zone].ContainsKey(INFINITE_DUNGEON_ZONE))
+            {
+                bool canResume = RogueProgress.CanResumeAtCheckpoint(INFINITE_DUNGEON_ZONE);
+                choices.Add(new MenuTextChoice("Nouvelle aventure", () => { startInfiniteRun(canResume); }));
+                if (canResume)
+                    choices.Add(new MenuTextChoice("Reprendre l'expédition", resumeInfiniteRun));
+                choices.Add(new MenuTextChoice(Text.FormatKey("MENU_OPTIONS_TITLE"), () => { MenuManager.Instance.AddMenu(new OptionsMenu(), false); }));
+                choices.Add(new MenuTextChoice(Text.FormatKey("MENU_QUIT_GAME"), exitGame));
+                Initialize(new Loc(16, 16), CalculateChoiceLength(choices, 72), choices.ToArray(), 0);
+
+                titleMenu = new SummaryMenu(MenuLabel.TOP_TITLE_SUMMARY, Rect.FromPoints(new Loc(Bounds.End.X + 16, 16), new Loc(GraphicsManager.ScreenWidth - 16, 16 + LINE_HEIGHT + GraphicsManager.MenuBG.TileHeight * 2)));
+                MenuText fgTitle = new MenuText(MenuLabel.TOP_TITLE_SUMMARY, "Explorateurs de l'Infini", new Loc(titleMenu.Bounds.Width / 2, GraphicsManager.MenuBG.TileHeight), DirH.None);
+                titleMenu.Elements.Add(fgTitle);
+                titleMenu.Visible = true;
+                SummaryMenus.Add(titleMenu);
+                return;
+            }
 
             if (DataManager.Instance.Save != null)
             {
@@ -98,6 +122,46 @@ namespace RogueEssence.Menu
         private void exitGame()
         {
             GameBase.CurrentPhase = GameBase.LoadPhase.Unload;
+        }
+
+        private static RogueConfig infiniteConfig()
+        {
+            RogueConfig config = new RogueConfig();
+            config.Destination = INFINITE_DUNGEON_ZONE;
+            config.DestinationRandomized = false;
+            config.Seed = MathUtils.Rand.NextUInt64();
+            config.SeedRandomized = true;
+            // nom d'équipe par défaut (la reprise ne repasse pas par l'écran
+            // de nom ; le nom d'origine n'est pas persisté — limitation connue)
+            config.TeamName = DataManager.Instance.Start.Teams[MathUtils.Rand.Next(DataManager.Instance.Start.Teams.Count)];
+            config.TeamRandomized = true;
+            return config;
+        }
+
+        private void startInfiniteRun(bool hasProgress)
+        {
+            if (hasProgress)
+            {
+                // une expédition est en cours : recommencer écrase la progression
+                MenuManager.Instance.AddMenu(MenuManager.Instance.CreateQuestion(
+                    "Une expédition est en cours. Recommencer efface l'équipe retenue et le checkpoint. Continuer ?",
+                    () =>
+                    {
+                        RogueProgress.ClearCheckpoint(INFINITE_DUNGEON_ZONE);
+                        MenuManager.Instance.AddMenu(new RogueTeamInputMenu(infiniteConfig()), false);
+                    },
+                    () => { }), false);
+            }
+            else
+                MenuManager.Instance.AddMenu(new RogueTeamInputMenu(infiniteConfig()), false);
+        }
+
+        private void resumeInfiniteRun()
+        {
+            // StartRogue détecte le checkpoint + l'équipe retenue et reprend
+            // directement au bon donjon (pas d'écran starter).
+            MenuManager.Instance.ClearMenus();
+            GameManager.Instance.SceneOutcome = RogueProgress.StartRogue(infiniteConfig());
         }
 
 

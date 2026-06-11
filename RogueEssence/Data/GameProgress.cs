@@ -1668,6 +1668,26 @@ namespace RogueEssence.Data
             return main.RogueCheckpoints.ContainsKey(zoneID);
         }
 
+        /// <summary>
+        /// Méta-progression : efface la progression d'une zone (checkpoint +
+        /// équipe retenue) pour repartir de zéro. Utilisé par « Nouvelle
+        /// aventure » quand une expédition est déjà en cours.
+        /// </summary>
+        public static void ClearCheckpoint(string zoneID)
+        {
+            GameState state = DataManager.Instance.LoadMainGameState(false);
+            MainProgress main = (state != null) ? state.Save as MainProgress : null;
+            if (main == null)
+                return;
+            if (main.RogueCheckpoints != null)
+                main.RogueCheckpoints.Remove(zoneID);
+            main.CharsToStore.Clear();
+            main.ItemsToStore.Clear();
+            main.StorageToStore = new Dictionary<string, int>();
+            main.MoneyToStore = 0;
+            DataManager.Instance.SaveGameState(state);
+        }
+
         public static IEnumerator<YieldInstruction> StartRogue(RogueConfig config)
         {
             DataManager.Instance.PreLoadZone(config.Destination);
