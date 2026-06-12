@@ -236,6 +236,17 @@ namespace RogueEssence.Script
         {
             if (segment < 0)
                 return;
+            // Défense en profondeur : ne jamais enregistrer un checkpoint hors des
+            // segments de la zone (un checkpoint == nb de segments ferait crasher la
+            // reprise). On clampe au dernier segment valide même si l'appelant Lua
+            // se trompe.
+            EntrySummary summary = DataManager.Instance.DataIndices[DataManager.DataType.Zone].Get(zoneId);
+            if (summary is ZoneEntrySummary zoneSummary && zoneSummary.Maps.Count > 0)
+            {
+                int maxSeg = zoneSummary.Maps.Count - 1;
+                if (segment > maxSeg)
+                    segment = maxSeg;
+            }
             GameState state = DataManager.Instance.LoadMainGameState(false);
             if (state == null || !(state.Save is MainProgress metaSave))
                 return;

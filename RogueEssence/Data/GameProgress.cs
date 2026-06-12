@@ -1705,6 +1705,13 @@ namespace RogueEssence.Data
                 hasCheckpoint = true;
                 startSeg = Math.Max(startSeg, ckpt);
             }
+            // Défense en profondeur : ne jamais démarrer une run sur un segment
+            // hors-borne (un checkpoint corrompu/hérité ferait crasher BeginGame).
+            EntrySummary destSummary = DataManager.Instance.DataIndices[DataManager.DataType.Zone].Get(config.Destination);
+            if (destSummary is ZoneEntrySummary destZone && destZone.Maps.Count > 0)
+                startSeg = Math.Min(startSeg, destZone.Maps.Count - 1);
+            if (startSeg < 0)
+                startSeg = 0;
             // Reprise = une mort méta a eu lieu ET une équipe sauvegardée est à
             // réinjecter — même au checkpoint 0 (mort au 1er donjon : on garde
             // l'équipe, design « rétention à la mort »). Sans équipe stockée
