@@ -1751,9 +1751,12 @@ namespace RogueEssence.Data
                 DataManager.Instance.Save.ActiveTeam.Bank += metaMain.MoneyToStore;
                 metaMain.MoneyToStore = 0;
 
-                // Files consommées : persister le MainProgress, sinon le prochain
-                // chargement du save principal restaurerait l'équipe une 2e fois.
-                DataManager.Instance.SaveGameState(metaState);
+                // H1 : on a vidé les files EN MÉMOIRE (metaMain) mais on NE persiste
+                // PAS encore le MainProgress sur disque. Tant que la run de reprise
+                // n'a pas son propre quicksave (créé par BeginGameInSegment plus bas),
+                // le disque garde l'équipe dans CharsToStore → un crash dans cette
+                // fenêtre la laisse récupérable au lieu de la perdre définitivement.
+                // La persistance des files vidées est différée APRÈS BeginGameInSegment.
                 DiagManager.Instance.LogInfo(String.Format("[meta-resume] team restored at segment {0}: {1} chars", startSeg, DataManager.Instance.Save.ActiveTeam.Players.Count + DataManager.Instance.Save.ActiveTeam.Assembly.Count));
             }
             else
@@ -1838,9 +1841,17 @@ namespace RogueEssence.Data
             }
             
             yield return CoroutineManager.Instance.StartCoroutine(GameManager.Instance.BeginGameInSegment(new ZoneLoc(config.Destination, new SegLoc(startSeg, 0)), GameProgress.DungeonStakes.Risk, true, false));
+
+            // H1 : la run de reprise a maintenant son quicksave (BeginGameInSegment ->
+            // BeginPlay). On peut enfin persister le MainProgress aux files vidées,
+            // sans fenêtre de perte définitive de l'équipe. Si un crash survient ici,
+            // au pire l'équipe existe en double (run quicksave + CharsToStore non
+            // vidé) → récupérable, jamais perdue.
+            if (resuming && metaState != null)
+                DataManager.Instance.SaveGameState(metaState);
         }
     }
-    
+
     public class RogueConfig
     {
         public string Destination;
