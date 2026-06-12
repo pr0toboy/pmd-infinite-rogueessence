@@ -109,6 +109,13 @@ namespace RogueEssence.Dungeon
         /// </summary>
         public int BossRecruitRate;
 
+        /// <summary>
+        /// Plafond de probabilité de recrutement (%) si IsBossRecruit : même une
+        /// Noigrume Parfaite ne dépasse pas ce plafond (boss jamais garantis ;
+        /// plus rares = plafond plus bas). 100 = pas de plafond.
+        /// </summary>
+        public int BossRecruitMax = 100;
+
         public List<BattleEvent> ActionEvents;
 
         [JsonConverter(typeof(Dev.ScriptVarsConverter))]
@@ -188,6 +195,7 @@ namespace RogueEssence.Dungeon
             IsFavorite = other.IsFavorite;
             IsBossRecruit = other.IsBossRecruit;
             BossRecruitRate = other.BossRecruitRate;
+            BossRecruitMax = other.BossRecruitMax;
             Discriminator = other.Discriminator;
 
             ActionEvents = new List<BattleEvent>();
