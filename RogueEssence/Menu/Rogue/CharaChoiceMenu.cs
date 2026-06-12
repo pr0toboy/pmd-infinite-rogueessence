@@ -29,10 +29,14 @@ namespace RogueEssence.Menu
         private RogueConfig config;
         private bool forPartner;
 
-        public CharaChoiceMenu(RogueConfig config) : this(MenuLabel.ROGUE_CHAR_MENU, config, false) { }
-        public CharaChoiceMenu(RogueConfig config, bool forPartner) : this(MenuLabel.ROGUE_CHAR_MENU, config, forPartner) { }
-        public CharaChoiceMenu(string label, RogueConfig config) : this(label, config, false) { }
-        public CharaChoiceMenu(string label, RogueConfig config, bool forPartner)
+        public CharaChoiceMenu(RogueConfig config) : this(MenuLabel.ROGUE_CHAR_MENU, config, false, null) { }
+        public CharaChoiceMenu(RogueConfig config, bool forPartner) : this(MenuLabel.ROGUE_CHAR_MENU, config, forPartner, null) { }
+        public CharaChoiceMenu(string label, RogueConfig config) : this(label, config, false, null) { }
+        public CharaChoiceMenu(string label, RogueConfig config, bool forPartner) : this(label, config, forPartner, null) { }
+        // customStarters != null : utilise CETTE liste d'espèces au lieu de
+        // GetStartersList (fangame : pool de starters filtré par type via le quiz).
+        public CharaChoiceMenu(RogueConfig config, List<string> customStarters) : this(MenuLabel.ROGUE_CHAR_MENU, config, false, customStarters) { }
+        public CharaChoiceMenu(string label, RogueConfig config, bool forPartner, List<string> customStarters)
         {
             Label = label;
             this.config = config;
@@ -42,7 +46,7 @@ namespace RogueEssence.Menu
             IntrinsicSetting = -1;
             FormSetting = -1;
 
-            startChars = GetStartersList();
+            startChars = customStarters ?? GetStartersList();
 
 
             List<MenuChoice> flatChoices = new List<MenuChoice>();

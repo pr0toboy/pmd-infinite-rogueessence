@@ -6,6 +6,8 @@ namespace RogueEssence.Menu
 {
     public class RogueTeamInputMenu : TextInputMenu
     {
+        private const string INFINITE_DUNGEON_ZONE = "infinite_dungeon";
+
         public override int MaxLength { get { return 96; } }
         private RogueConfig config;
         private bool randomized;
@@ -67,6 +69,10 @@ namespace RogueEssence.Menu
                 MenuManager.Instance.ClearMenus();
                 GameManager.Instance.SceneOutcome = RogueProgress.StartRogue(config);
             }
+            else if (config.Destination == INFINITE_DUNGEON_ZONE)
+                // Fangame : quiz de sélection par type (pool 45 figé) au lieu de
+                // l'écran de choix vanilla. Le roguelocke vanilla garde CharaChoiceMenu.
+                MenuManager.Instance.AddMenu(new StarterTypeMenu(config), false);
             else
                 MenuManager.Instance.AddMenu(new CharaChoiceMenu(config), false);
         }
