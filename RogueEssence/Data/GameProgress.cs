@@ -1457,15 +1457,12 @@ namespace RogueEssence.Data
                 Outcome = result;
 
                 DataManager.Instance.MsgLog.Clear();
-                DiagManager.Instance.LogInfo("[meta-hang] EndGame death branch entered, result=" + result);
                 //end the game with a recorded ending
                 string recordFile = DataManager.Instance.EndPlay(this, null);
-                DiagManager.Instance.LogInfo("[meta-hang] EndPlay done, recordFile=" + recordFile);
 
                 MenuBase.Transparent = false;
                 //save to the main file
                 GameState state = DataManager.Instance.LoadMainGameState(false);
-                DiagManager.Instance.LogInfo("[meta-hang] LoadMainGameState done, state null? " + (state == null));
                 List<string> newRecruits = new List<string>();
                 if (state != null)
                 {
@@ -1476,7 +1473,6 @@ namespace RogueEssence.Data
                     // perdus). Au prochain démarrage, MainProgress restaure ces éléments
                     // (CharsToStore/StorageToStore/MoneyToStore) -> reprise au checkpoint.
                     ZoneData metaZone = DataManager.Instance.GetZone(ZoneManager.Instance.CurrentZoneID);
-                    DiagManager.Instance.LogInfo("[meta-hang] GetZone done, rogue=" + (metaZone == null ? "nullzone" : metaZone.Rogue.ToString()));
                     if (metaZone != null && metaZone.Rogue == RogueStatus.MetaProgress && state.Save is MainProgress metaSave)
                     {
                         // Les files représentent l'ÉTAT retenu (dernière mort), pas une
@@ -1512,11 +1508,9 @@ namespace RogueEssence.Data
                             int prevSeg = metaSave.RogueCheckpoints.TryGetValue(metaZoneID, out int p) ? p : 0;
                             metaSave.RogueCheckpoints[metaZoneID] = Math.Max(prevSeg, curSeg);
                         }
-                        DiagManager.Instance.LogInfo("[meta-hang] meta transfer block done, chars=" + metaSave.CharsToStore.Count);
                     }
 
                     DataManager.Instance.SaveGameState(state);
-                    DiagManager.Instance.LogInfo("[meta-hang] SaveGameState done");
                 }
 
                 if (recorded && display)
@@ -1534,9 +1528,7 @@ namespace RogueEssence.Data
                         GameManager.Instance.SE("Menu/Skip");
 
                     FinalResultsMenu menu = new FinalResultsMenu(ending);
-                    DiagManager.Instance.LogInfo("[meta-hang] showing FinalResultsMenu (waiting for player input)");
                     yield return CoroutineManager.Instance.StartCoroutine(MenuManager.Instance.ProcessMenuCoroutine(menu));
-                    DiagManager.Instance.LogInfo("[meta-hang] FinalResultsMenu dismissed");
 
                     Dictionary<string, List<RecordHeaderData>> scores = RecordHeaderData.LoadHighScores();
 
@@ -1553,7 +1545,6 @@ namespace RogueEssence.Data
                     GameManager.Instance.Fanfare("Fanfare/NewArea");
                     yield return CoroutineManager.Instance.StartCoroutine(MenuManager.Instance.SetDialogue(Text.FormatKey("DLG_NEW_CHARS")));
                 }
-                DiagManager.Instance.LogInfo("[meta-hang] death branch complete, returning to caller (title)");
             }
             else
             {
