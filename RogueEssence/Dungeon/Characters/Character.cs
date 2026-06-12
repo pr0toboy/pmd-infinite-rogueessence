@@ -2712,6 +2712,22 @@ namespace RogueEssence.Dungeon
             CharSheet sheet = GraphicsManager.GetChara(Appearance.ToCharID());
             currentCharAction.Draw(spriteBatch, offset, sheet);
 
+            // Fangame : petite barre de PV au-dessus des ENNEMIS (aide au
+            // recrutement Noigrume : voir quand l'ennemi est assez bas pour tenter).
+            if (MemberTeam is MonsterTeam && !Dead && MaxHP > 0)
+            {
+                int barWidth = GraphicsManager.TileSize - 8;
+                int barHeight = 2;
+                int barX = (MapLoc.X - offset.X) - barWidth / 2;
+                int barY = (MapLoc.Y - offset.Y) - GraphicsManager.TileSize - LocHeight;
+                int filled = (int)Math.Round((double)barWidth * HP / MaxHP);
+                filled = Math.Max(0, Math.Min(barWidth, filled));
+                float frac = (float)HP / MaxHP;
+                Color fill = frac > 0.5f ? Color.LimeGreen : (frac > 0.25f ? Color.Gold : Color.Red);
+                GraphicsManager.Pixel.Draw(spriteBatch, new Rectangle(barX - 1, barY - 1, barWidth + 2, barHeight + 2), null, Color.Black * 0.6f);
+                GraphicsManager.Pixel.Draw(spriteBatch, new Rectangle(barX, barY, filled, barHeight), null, fill);
+            }
+
             if (currentEmote != null)
             {
                 Loc head = currentCharAction.GetActionPoint(sheet, ActionPointType.Head);
