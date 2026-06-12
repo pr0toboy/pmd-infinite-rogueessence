@@ -69,9 +69,10 @@ namespace RogueEssence.Menu
                 MenuManager.Instance.ClearMenus();
                 GameManager.Instance.SceneOutcome = RogueProgress.StartRogue(config);
             }
-            else if (config.Destination == INFINITE_DUNGEON_ZONE)
-                // Fangame : quiz de sélection par type (pool 45 figé) au lieu de
-                // l'écran de choix vanilla. Le roguelocke vanilla garde CharaChoiceMenu.
+            else if (config.Destination == INFINITE_DUNGEON_ZONE && !DiagManager.Instance.DevMode)
+                // Fangame (joueur) : quiz de sélection par type (pool 45 figé).
+                // En -dev on garde l'écran de choix complet (CharaChoiceMenu /
+                // GetStartersList) pour tester n'importe quelle espèce comme starter.
                 MenuManager.Instance.AddMenu(new StarterTypeMenu(config), false);
             else
                 MenuManager.Instance.AddMenu(new CharaChoiceMenu(config), false);
