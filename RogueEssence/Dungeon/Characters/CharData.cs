@@ -96,6 +96,14 @@ namespace RogueEssence.Dungeon
 
         public bool Unrecruitable;
 
+        /// <summary>
+        /// Fangame (boss EoS) : taux de recrutement FORCÉ pour ce personnage,
+        /// indépendant du JoinRate de l'espèce. -1 = pas un boss recrutable
+        /// (utilise le JoinRate normal). >= 0 = boss recrutable à ce taux, et
+        /// la barrière de niveau de recrutement est ignorée.
+        /// </summary>
+        public int BossRecruitRate = -1;
+
         public List<BattleEvent> ActionEvents;
 
         [JsonConverter(typeof(Dev.ScriptVarsConverter))]
@@ -173,6 +181,7 @@ namespace RogueEssence.Dungeon
             IsFounder = other.IsFounder;
             IsPartner = other.IsPartner;
             IsFavorite = other.IsFavorite;
+            BossRecruitRate = other.BossRecruitRate;
             Discriminator = other.Discriminator;
 
             ActionEvents = new List<BattleEvent>();
