@@ -1494,7 +1494,11 @@ namespace RogueEssence.Data
                         }
                         foreach (InvItem item in ActiveTeam.BoxStorage)
                             metaSave.ItemsToStore.Add(item);
-                        metaSave.StorageToStore = ActiveTeam.Storage;
+                        // M4 : copie défensive — ne PAS partager par référence le
+                        // dictionnaire de stockage de la run morte avec le MainProgress
+                        // (le vanilla askTransfer aliase ; sain tant que le main save
+                        // est relu du disque à chaque fois, mais fragile à un futur cache).
+                        metaSave.StorageToStore = new Dictionary<string, int>(ActiveTeam.Storage);
                         metaSave.MoneyToStore = ActiveTeam.Bank;   // banque conservée ; argent porté perdu
 
                         // Reprise au checkpoint : mémoriser le segment du donjon courant
