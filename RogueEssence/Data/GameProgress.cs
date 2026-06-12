@@ -1677,6 +1677,10 @@ namespace RogueEssence.Data
             main.StorageToStore = new Dictionary<string, int>();
             main.MoneyToStore = 0;
             DataManager.Instance.SaveGameState(state);
+            // H2 : supprimer aussi les runs rogue en cours, sinon « Continuer
+            // l'expédition » rechargerait l'ancienne progression (et ré-écrirait
+            // un checkpoint au prochain clear, ressuscitant ce qu'on vient d'effacer).
+            DataManager.Instance.DeleteRogueQuicksaves();
         }
 
         public static IEnumerator<YieldInstruction> StartRogue(RogueConfig config)

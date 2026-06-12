@@ -2711,6 +2711,29 @@ namespace RogueEssence.Data
         }
 
         /// <summary>
+        /// Deletes all in-progress rogue quicksaves (ROGUE_PATH/*.rsqs).
+        /// Méta-progression : appelé quand le joueur recommence une expédition,
+        /// pour que « Continuer l'expédition » ne recharge pas une run de
+        /// l'ancienne progression (qui ré-écrirait un checkpoint au prochain clear).
+        /// </summary>
+        public void DeleteRogueQuicksaves()
+        {
+            try
+            {
+                string roguePath = PathMod.ModSavePath(ROGUE_PATH);
+                if (Directory.Exists(roguePath))
+                {
+                    foreach (string file in Directory.GetFiles(roguePath, "*" + QUICKSAVE_EXTENSION))
+                        File.Delete(file);
+                }
+            }
+            catch (Exception ex)
+            {
+                DiagManager.Instance.LogError(ex, false);
+            }
+        }
+
+        /// <summary>
         /// Deletes replays from the replay folder corresponding to the current mod.
         /// </summary>
         /// <param name="includeFav">Favorites will be deleted too.</param>

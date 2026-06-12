@@ -33,9 +33,13 @@ namespace RogueEssence.Menu
             {
                 bool canResume = RogueProgress.CanResumeAtCheckpoint(INFINITE_DUNGEON_ZONE);
                 // run en cours sauvegardée (save&quit à une halte ou en donjon)
-                if (DataManager.Instance.FoundRecords(PathMod.ModSavePath(DataManager.ROGUE_PATH), DataManager.QUICKSAVE_EXTENSION))
+                bool hasQuicksave = DataManager.Instance.FoundRecords(PathMod.ModSavePath(DataManager.ROGUE_PATH), DataManager.QUICKSAVE_EXTENSION);
+                if (hasQuicksave)
                     choices.Add(new MenuTextChoice("Continuer l'expédition", () => { MenuManager.Instance.AddMenu(new QuicksaveMenu(), false); }));
-                choices.Add(new MenuTextChoice("Nouvelle aventure", () => { startInfiniteRun(canResume); }));
+                // « Nouvelle aventure » avertit/efface si une progression existe :
+                // soit un checkpoint méta, soit une run en cours.
+                bool hasProgress = canResume || hasQuicksave;
+                choices.Add(new MenuTextChoice("Nouvelle aventure", () => { startInfiniteRun(hasProgress); }));
                 if (canResume)
                     choices.Add(new MenuTextChoice("Reprendre l'expédition", resumeInfiniteRun));
                 choices.Add(new MenuTextChoice(Text.FormatKey("MENU_OPTIONS_TITLE"), () => { MenuManager.Instance.AddMenu(new OptionsMenu(), false); }));
