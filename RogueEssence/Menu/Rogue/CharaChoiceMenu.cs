@@ -28,6 +28,9 @@ namespace RogueEssence.Menu
         private List<string> startChars;
         private RogueConfig config;
         private bool forPartner;
+        // Fangame : pool de starters fourni explicitement (quiz par type) → genre
+        // TOUJOURS aléatoire (demande Alexis 2026-06-12), peu importe la customisation.
+        private bool forceRandomGender;
 
         public CharaChoiceMenu(RogueConfig config) : this(MenuLabel.ROGUE_CHAR_MENU, config, false, null) { }
         public CharaChoiceMenu(RogueConfig config, bool forPartner) : this(MenuLabel.ROGUE_CHAR_MENU, config, forPartner, null) { }
@@ -45,6 +48,7 @@ namespace RogueEssence.Menu
             SkinSetting = DataManager.Instance.DefaultSkin;
             IntrinsicSetting = -1;
             FormSetting = -1;
+            forceRandomGender = customStarters != null;
 
             startChars = customStarters ?? GetStartersList();
 
@@ -198,7 +202,7 @@ namespace RogueEssence.Menu
                 // Sole chara = player. Stash its settings on config and launch solo.
                 config.IntrinsicSetting = IntrinsicSetting;
                 config.FormSetting = FormSetting;
-                config.GenderSetting = GenderSetting;
+                config.GenderSetting = forceRandomGender ? Gender.Unknown : GenderSetting;
                 config.SkinSetting = SkinSetting;
                 config.Nickname = name;
                 config.Starter = startChars[choice];

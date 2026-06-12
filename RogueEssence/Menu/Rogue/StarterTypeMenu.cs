@@ -37,7 +37,9 @@ namespace RogueEssence.Menu
             ("steel",    new[] { "honedge", "beldum" }),
             ("flying",   new[] { "starly", "pidgey" }),
             ("fairy",    new[] { "cleffa", "flabebe" }),
-            ("poison",   new[] { "nidoran_m", "zubat" }),
+            // @nidoran = Nidoran ♂/♀ tiré au hasard (lignées Nidoking/Nidoqueen,
+            // demande Alexis 2026-06-12), résolu à la sélection du type.
+            ("poison",   new[] { "@nidoran", "zubat" }),
             ("dark",     new[] { "impidimp", "pawniard" }),
             ("bug",      new[] { "grubbin", "caterpie" }),
         };
@@ -78,8 +80,25 @@ namespace RogueEssence.Menu
 
         private void chooseType(string[] pool)
         {
-            List<string> starters = new List<string>(pool);
+            List<string> starters = new List<string>();
+            foreach (string sp in pool)
+                starters.Add(ResolveSpecies(sp));
             MenuManager.Instance.AddMenu(new CharaChoiceMenu(config, starters), false);
+        }
+
+        /// <summary>
+        /// Résout les sentinelles « @… » du pool en une espèce concrète tirée au
+        /// hasard (ce que voit le joueur = ce qu'il obtient).
+        /// </summary>
+        private static string ResolveSpecies(string entry)
+        {
+            switch (entry)
+            {
+                case "@nidoran":
+                    return MathUtils.Rand.Next(2) == 0 ? "nidoran_m" : "nidoran_f";
+                default:
+                    return entry;
+            }
         }
     }
 }
