@@ -349,6 +349,9 @@ namespace RogueEssence.Dungeon
         public Map.SightRange CharSight;
         //sprite is not visible and information about the entity is unavailable
         public bool Unidentifiable;
+        // Fangame (quête Marshadow) : ne dessine QUE l'ombre, pas le sprite du corps
+        // (suiveur « dans l'ombre »). L'ombre est dessinée par DrawShadow (séparé).
+        public bool ShadowOnly;
         //position is not visible
         public bool Unlocatable;
         public bool SeeAllChars;
@@ -2710,6 +2713,10 @@ namespace RogueEssence.Dungeon
         public void Draw(SpriteBatch spriteBatch, Loc offset)
         {
             CharSheet sheet = GraphicsManager.GetChara(Appearance.ToCharID());
+            // Fangame (quête Marshadow) : ShadowOnly = on saute le dessin du corps ;
+            // l'ombre reste dessinée par DrawShadow. Le suiveur n'apparaît que comme une ombre.
+            if (ShadowOnly)
+                return;
             currentCharAction.Draw(spriteBatch, offset, sheet);
 
             // Fangame : petite barre de PV au-dessus des ENNEMIS (aide au
