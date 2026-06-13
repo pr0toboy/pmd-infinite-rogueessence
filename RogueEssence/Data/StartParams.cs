@@ -13,6 +13,15 @@ namespace RogueEssence.Data
         public ZoneLoc Map;
         public int Level;
         public int MaxLevel;
+        /// <summary>
+        /// Niveau de référence pour le CALCUL DES STATS (normaliseur des formules).
+        /// Découplé de MaxLevel (= plafond de niveau atteignable) pour permettre de
+        /// dépasser le niv100 SANS rescaler/nerfer tout l'équilibre : les stats
+        /// restent calées sur StatLevel pendant que MaxLevel peut monter (un niveau
+        /// > StatLevel donne donc des stats proportionnellement plus hautes).
+        /// Par défaut = MaxLevel (comportement vanilla) si absent du XML.
+        /// </summary>
+        public int StatLevel;
         public List<string> Teams;
     }
 

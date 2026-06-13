@@ -571,6 +571,13 @@ namespace RogueEssence.Data
                     XmlNode maxLevel = xmldoc.DocumentElement.SelectSingleNode("MaxLevel");
                     Start.MaxLevel = Int32.Parse(maxLevel.InnerText);
 
+                    // StatLevel : normaliseur des stats (cf. StartParams). Absent du
+                    // XML => vanilla (= MaxLevel). Jamais 0 (division dans les stats).
+                    XmlNode statLevel = xmldoc.DocumentElement.SelectSingleNode("StatLevel");
+                    Start.StatLevel = (statLevel != null) ? Int32.Parse(statLevel.InnerText) : Start.MaxLevel;
+                    if (Start.StatLevel <= 0)
+                        Start.StatLevel = Start.MaxLevel;
+
                     XmlNode startPersonality = xmldoc.DocumentElement.SelectSingleNode("StartPersonality");
                     Start.Personality = Int32.Parse(startPersonality.InnerText);
 
@@ -636,6 +643,7 @@ namespace RogueEssence.Data
 
                 docNode.AppendInnerTextChild(xmldoc, "StartLevel", Start.Level.ToString());
                 docNode.AppendInnerTextChild(xmldoc, "MaxLevel", Start.MaxLevel.ToString());
+                docNode.AppendInnerTextChild(xmldoc, "StatLevel", Start.StatLevel.ToString());
                 docNode.AppendInnerTextChild(xmldoc, "StartPersonality", Start.Personality.ToString());
 
                 docNode.AppendInnerTextChild(xmldoc, "DefaultZone", DefaultZone.ToString());
