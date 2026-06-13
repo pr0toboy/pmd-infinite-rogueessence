@@ -182,16 +182,38 @@ namespace RogueEssence.Data
         {
             lock (lockObj)
             {
-                using (StreamReader reader = new StreamReader(stream, Encoding.UTF8, true, -1, true))
+                // Lecture ROBUSTE : les très gros fichiers data (zone ~24 Mo) échouaient par
+                // INTERMITTENCE en désérialisation .NET (« Unexpected end », offset variable)
+                // bien que valides sur disque — lecture tronquée ponctuelle (flakiness FS,
+                // notamment WSL2, sur gros fichier). Sans retry, LoadCacheFull attrape
+                // l'exception et VIDE tout le cache → « Could not find Zone ID » + crash boot.
+                // On re-lit (flux seekable) jusqu'à 3 fois avant de propager.
+                Exception lastErr = null;
+                for (int attempt = 0; attempt < 3; attempt++)
                 {
-                    string containerStr = reader.ReadToEnd();
-                    //Temporarily set global old version for converters in UpgradeConverters.cs to recognize the version.
-                    Version pastVersion = OldVersion;
-                    OldVersion = GetVersion(containerStr);
-                    SerializationContainer container = (SerializationContainer)JsonConvert.DeserializeObject(containerStr, typeof(SerializationContainer), Settings);
-                    OldVersion = pastVersion;
-                    return container.Object;
+                    try
+                    {
+                        if (attempt > 0 && stream.CanSeek)
+                            stream.Seek(0, SeekOrigin.Begin);
+                        using (StreamReader reader = new StreamReader(stream, Encoding.UTF8, true, -1, true))
+                        {
+                            string containerStr = reader.ReadToEnd();
+                            //Temporarily set global old version for converters in UpgradeConverters.cs to recognize the version.
+                            Version pastVersion = OldVersion;
+                            OldVersion = GetVersion(containerStr);
+                            SerializationContainer container = (SerializationContainer)JsonConvert.DeserializeObject(containerStr, typeof(SerializationContainer), Settings);
+                            OldVersion = pastVersion;
+                            return container.Object;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        lastErr = ex;
+                        if (!stream.CanSeek)
+                            break; // pas de re-lecture possible
+                    }
                 }
+                throw lastErr;
             }
         }
 
