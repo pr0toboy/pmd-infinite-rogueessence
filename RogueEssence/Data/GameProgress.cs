@@ -1720,12 +1720,35 @@ namespace RogueEssence.Data
                 startSeg = Math.Min(startSeg, destZone.Maps.Count - 1);
             if (startSeg < 0)
                 startSeg = 0;
-            // Reprise = une mort méta a eu lieu ET une équipe sauvegardée est à
-            // réinjecter — même au checkpoint 0 (mort au 1er donjon : on garde
-            // l'équipe, design « rétention à la mort »). Sans équipe stockée
-            // (vieux save, files déjà consommées), flux starter normal mais on
-            // démarre quand même au checkpoint.
-            bool resuming = hasCheckpoint && metaMain.CharsToStore.Count > 0;
+
+            // MODE ROGUELIKE (pivot, zone infinite_dungeon) : chaque run REPART de seg0.
+            // Pas de reprise au checkpoint ni de réinjection de l'équipe leveled (starter
+            // FRAIS chaque run) ; on GARDE banque + stockage (couche méta persistante) ;
+            // l'argent/les objets PORTÉS sont perdus à la mort. On RESET le checkpoint
+            // monotone (sinon la run redémarrerait au plus profond atteint).
+            // Persistance des files vidées DIFFÉRÉE après BeginGameInSegment (cf. H1).
+            bool roguelike = (config.Destination == "infinite_dungeon");
+            if (roguelike)
+            {
+                startSeg = 0;
+                if (metaMain != null)
+                {
+                    DataManager.Instance.Save.ActiveTeam.StoreItems(metaMain.ItemsToStore);
+                    metaMain.ItemsToStore.Clear();
+                    foreach (string key in metaMain.StorageToStore.Keys)
+                        DataManager.Instance.Save.ActiveTeam.Storage[key] = metaMain.StorageToStore[key] + DataManager.Instance.Save.ActiveTeam.Storage.GetValueOrDefault(key, 0);
+                    metaMain.StorageToStore.Clear();
+                    DataManager.Instance.Save.ActiveTeam.Bank += metaMain.MoneyToStore;
+                    metaMain.MoneyToStore = 0;
+                    metaMain.CharsToStore.Clear();   // équipe NON réinjectée : run fraîche
+                    if (metaMain.RogueCheckpoints != null)
+                        metaMain.RogueCheckpoints.Remove(config.Destination);   // reset checkpoint monotone
+                }
+            }
+
+            // Reprise (NON-roguelike) = une mort méta a eu lieu ET une équipe sauvegardée
+            // est à réinjecter. En mode roguelike on ne reprend jamais (starter frais).
+            bool resuming = !roguelike && hasCheckpoint && metaMain.CharsToStore.Count > 0;
             config.MetaResume = resuming;
 
             if (resuming)
@@ -1851,7 +1874,7 @@ namespace RogueEssence.Data
             // sans fenêtre de perte définitive de l'équipe. Si un crash survient ici,
             // au pire l'équipe existe en double (run quicksave + CharsToStore non
             // vidé) → récupérable, jamais perdue.
-            if (resuming && metaState != null)
+            if ((resuming || roguelike) && metaState != null)
                 DataManager.Instance.SaveGameState(metaState);
         }
     }
