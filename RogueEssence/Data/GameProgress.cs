@@ -1894,7 +1894,18 @@ namespace RogueEssence.Data
                 DiagManager.Instance.LogError(ex);
             }
             
-            yield return CoroutineManager.Instance.StartCoroutine(GameManager.Instance.BeginGameInSegment(new ZoneLoc(config.Destination, new SegLoc(startSeg, 0)), GameProgress.DungeonStakes.Risk, true, false));
+            // Genèse (pivot Hadès) : en roguelike, une run NE démarre PAS dans le
+            // donjon mais dans le VILLAGE-hub (map sol -1, GroundMaps idx 3 =
+            // infinite_village_outdoor). Le joueur s'y soigne/équipe puis plonge via
+            // l'entité StartRun (ground script -> GAME:ContinueDungeon seg0). La mort
+            // repasse par ici (EndDungeonDay -> RestartRogue -> StartRogue) -> retour
+            // village avec une équipe fraîche (banque/stockage/Fragments persistés). Les
+            // runs non-roguelike gardent l'entrée donjon classique SegLoc(startSeg, 0).
+            const int VILLAGE_OUTDOOR_GROUND = 3;   // doit suivre GroundMaps de gen_eos_dungeons.py
+            ZoneLoc startLoc = roguelike
+                ? new ZoneLoc(config.Destination, new SegLoc(-1, VILLAGE_OUTDOOR_GROUND))
+                : new ZoneLoc(config.Destination, new SegLoc(startSeg, 0));
+            yield return CoroutineManager.Instance.StartCoroutine(GameManager.Instance.BeginGameInSegment(startLoc, GameProgress.DungeonStakes.Risk, true, false));
 
             // H1 : la run de reprise a maintenant son quicksave (BeginGameInSegment ->
             // BeginPlay). On peut enfin persister le MainProgress aux files vidées,
