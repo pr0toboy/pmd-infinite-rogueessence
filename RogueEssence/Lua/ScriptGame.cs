@@ -217,6 +217,22 @@ namespace RogueEssence.Script
         }
 
         /// <summary>
+        /// Suspend the game from a ground map (quicksave + return to title). Unlike
+        /// GroundSave (which writes the MAIN save slot), this suspends the ACTIVE
+        /// recording: for a rogue run it writes the rogue quicksave (.rsqs), resumed
+        /// via the rogue continue flow. Use this for save-and-quit of a rogue run
+        /// (e.g. from a rest stop) — GroundSave would write a RogueProgress into the
+        /// main slot and break the main "Continue".
+        /// </summary>
+        /// <example>
+        /// GAME:GroundSuspend()
+        /// </example>
+        public void GroundSuspend()
+        {
+            GameManager.Instance.SceneOutcome = GroundScene.Instance.SuspendGame();
+        }
+
+        /// <summary>
         /// Restarts a Roguelocke run based on the configuration
         /// </summary>
         ///  <param name="config">The configuration of the roguelocke run</param>
