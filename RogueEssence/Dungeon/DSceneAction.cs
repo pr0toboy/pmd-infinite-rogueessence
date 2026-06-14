@@ -721,6 +721,11 @@ namespace RogueEssence.Dungeon
                 return true;
             if (target.Dead)
                 return false;
+            // Fangame (quête Marshadow) : le suiveur « dans l'ombre » est INTOUCHABLE.
+            // ShadowOnly = rendu ombre seule + intargetable (ni allié, ni ennemi ne le vise).
+            // Au dévoilement, ShadowOnly repasse à false -> il redevient ciblable (vulnérable).
+            if (target.ShadowOnly)
+                return false;
             Alignment alignment = GetMatchup(attacker, target, action);
             return (acceptedTargets & alignment) != 0;
         }
