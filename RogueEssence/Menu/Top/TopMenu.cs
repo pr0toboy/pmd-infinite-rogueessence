@@ -318,6 +318,41 @@ namespace RogueEssence.Menu
             DataManager.Instance.Save.UpdateVersion();
             DataManager.Instance.Save.UpdateOptions();
 
+            // Fangame : garde-fou de compatibilité de structure. Un vieux save peut pointer
+            // vers un segment/étage qui n'existe plus dans la structure de donjon actuelle
+            // (ex. infinite_dungeon passé à 97 segments). Sans ça : IndexOutOfRange dans
+            // Zone.GetMap (reprise sur CurrentMapID) ou ArgumentException dans MoveToZone
+            // (reprise sur NextDest). On détecte avant de reprendre et on revient au titre.
+            {
+                ZoneLoc nextDest = DataManager.Instance.Save.NextDest;
+                bool resumeValid = true;
+                if (nextDest.IsValid() && nextDest.ID != ZoneManager.Instance.CurrentZoneID)
+                {
+                    // Reprise vers une AUTRE zone : MoveToZone la recharge depuis les données
+                    // -> valider via le résumé (comme le fait MoveToZone, mais en douceur).
+                    resumeValid = DataManager.Instance.DataIndices[DataManager.DataType.Zone].ContainsKey(nextDest.ID)
+                        && ((ZoneEntrySummary)DataManager.Instance.DataIndices[DataManager.DataType.Zone].Get(nextDest.ID)).SegLocValid(nextDest.StructID);
+                }
+                else
+                {
+                    // Reprise dans la zone CHARGÉE depuis le save -> valider contre sa structure
+                    // RÉELLE (c'est elle que Zone.GetMap indexera). Segment <= -1 = sol (Grounds,
+                    // géré ailleurs), on laisse passer ; on garde le cas donjon (cause du crash).
+                    SegLoc target = nextDest.IsValid() ? nextDest.StructID : ZoneManager.Instance.CurrentMapID;
+                    Zone curZone = ZoneManager.Instance.CurrentZone;
+                    if (target.Segment >= 0)
+                        resumeValid = curZone != null && target.Segment < curZone.Segments.Count;
+                }
+                if (!resumeValid)
+                {
+                    DiagManager.Instance.LogInfo("Save incompatible avec la structure de donjon actuelle — retour au titre.");
+                    yield return CoroutineManager.Instance.StartCoroutine(GameManager.Instance.RestartToTitle());
+                    MenuManager.Instance.AddMenu(MenuManager.Instance.CreateDialogue(
+                        "Cette sauvegarde provient d'une version antérieure de l'aventure et n'est plus compatible avec la structure actuelle des donjons. Démarrez une [color=#00FFFF]Nouvelle aventure[color]."), false);
+                    yield break;
+                }
+            }
+
             yield return CoroutineManager.Instance.StartCoroutine(ZoneManager.Instance.CurrentZone.OnInit());
             if (ZoneManager.Instance.CurrentMapID.Segment > -1)
                 GameManager.Instance.MoveToScene(DungeonScene.Instance);
