@@ -164,6 +164,17 @@ namespace RogueEssence.Data
         [JsonConverter(typeof(Dev.ScriptVarsConverter))]
         public LuaTableContainer ScriptVars;
 
+        // Méta-progression « Genèse » (pivot roguelike). Monnaie permanente
+        // « Fragments de lumière » + niveaux d'améliorations achetées à l'arbre
+        // (le Miroir). Comme la banque, ces valeurs survivent aux runs : portées
+        // par le MainProgress, ferries à chaque mort (RogueProgress.EndGame ->
+        // metaSave) et rechargées dans la run au démarrage (StartRogue). La
+        // RogueProgress en garde une copie de travail le temps de la run (gain à
+        // la fin de run, dépense à l'arbre). Saves antérieurs : champ absent =>
+        // 0 / dict vide (init ci-dessous), pas de migration nécessaire.
+        public int MetaCurrency;
+        public Dictionary<string, int> MetaUpgrades;
+
         public GameProgress()
         {
             GameVersion = new Version();
@@ -174,6 +185,7 @@ namespace RogueEssence.Data
             FormDex = new Dictionary<MonsterID, UnlockState>();
             RogueStarters = new Dictionary<string, bool>();
             DungeonUnlocks = new Dictionary<string, UnlockState>();
+            MetaUpgrades = new Dictionary<string, int>();
 
             NextDest = ZoneLoc.Invalid;
 
@@ -1512,6 +1524,15 @@ namespace RogueEssence.Data
                             int prevSeg = metaSave.RogueCheckpoints.TryGetValue(metaZoneID, out int p) ? p : 0;
                             metaSave.RogueCheckpoints[metaZoneID] = Math.Max(prevSeg, curSeg);
                         }
+
+                        // Méta « Genèse » : persister la monnaie + niveaux d'arbre de
+                        // la run morte. La copie de travail (this.MetaCurrency) = le
+                        // total chargé au démarrage + gains de cette run (le routeur
+                        // crédite les Fragments à la mort, AVANT EndGame). Écriture
+                        // directe (pas d'accumulation) : la run possède la valeur le
+                        // temps de la run, le village la possède entre deux runs.
+                        metaSave.MetaCurrency = this.MetaCurrency;
+                        metaSave.MetaUpgrades = new Dictionary<string, int>(this.MetaUpgrades);
                     }
 
                     DataManager.Instance.SaveGameState(state);
@@ -1740,6 +1761,12 @@ namespace RogueEssence.Data
                     metaMain.StorageToStore.Clear();
                     DataManager.Instance.Save.ActiveTeam.Bank += metaMain.MoneyToStore;
                     metaMain.MoneyToStore = 0;
+                    // Méta « Genèse » : charger le portefeuille permanent (Fragments
+                    // de lumière) + niveaux d'arbre dans la copie de travail de la run.
+                    // L'arbre (entre deux runs, au village = MainProgress) modifie le
+                    // total ; on en repart ici. Ferry inverse à la mort (EndGame).
+                    DataManager.Instance.Save.MetaCurrency = metaMain.MetaCurrency;
+                    DataManager.Instance.Save.MetaUpgrades = new Dictionary<string, int>(metaMain.MetaUpgrades);
                     metaMain.CharsToStore.Clear();   // équipe NON réinjectée : run fraîche
                     if (metaMain.RogueCheckpoints != null)
                         metaMain.RogueCheckpoints.Remove(config.Destination);   // reset checkpoint monotone

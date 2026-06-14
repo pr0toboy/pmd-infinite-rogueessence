@@ -1372,6 +1372,68 @@ namespace RogueEssence.Script
         }
 
         //===================================
+        // Méta-progression « Genèse » : Fragments de lumière + arbre (le Miroir)
+        //===================================
+        // Monnaie permanente et niveaux d'arbre vivent sur le GameProgress courant
+        // (copie de travail en run, MainProgress au village). Le ferry vers le
+        // MainProgress se fait à la mort (RogueProgress.EndGame) et au démarrage de
+        // run (StartRogue). Ces bindings sont synchrones (pas de coroutine).
+
+        /// <summary>
+        /// Gets the player's permanent meta currency (« Fragments de lumière »).
+        /// </summary>
+        public int GetMetaCurrency()
+        {
+            return DataManager.Instance.Save.MetaCurrency;
+        }
+
+        /// <summary>
+        /// Adds to the player's meta currency (gain de fin de run : profondeur + boss).
+        /// </summary>
+        public void AddMetaCurrency(int toadd)
+        {
+            if (toadd < 0)
+                toadd = 0;
+            DataManager.Instance.Save.MetaCurrency += toadd;
+        }
+
+        /// <summary>
+        /// Spends meta currency at the upgrade tree. Returns true if the player had
+        /// enough (and it was deducted), false otherwise (nothing deducted).
+        /// </summary>
+        public bool SpendMetaCurrency(int cost)
+        {
+            if (cost < 0)
+                cost = 0;
+            if (DataManager.Instance.Save.MetaCurrency < cost)
+                return false;
+            DataManager.Instance.Save.MetaCurrency -= cost;
+            return true;
+        }
+
+        /// <summary>
+        /// Gets the purchased level of a meta upgrade (0 if never bought).
+        /// </summary>
+        public int GetMetaUpgrade(string id)
+        {
+            if (DataManager.Instance.Save.MetaUpgrades == null || id == null)
+                return 0;
+            return DataManager.Instance.Save.MetaUpgrades.TryGetValue(id, out int lv) ? lv : 0;
+        }
+
+        /// <summary>
+        /// Sets the purchased level of a meta upgrade.
+        /// </summary>
+        public void SetMetaUpgrade(string id, int level)
+        {
+            if (id == null)
+                return;
+            if (DataManager.Instance.Save.MetaUpgrades == null)
+                DataManager.Instance.Save.MetaUpgrades = new Dictionary<string, int>();
+            DataManager.Instance.Save.MetaUpgrades[id] = level;
+        }
+
+        //===================================
         // Input
         //===================================
 
