@@ -1466,6 +1466,18 @@ namespace RogueEssence.Data
                 // méta pour que l'effet ne soit PAS écrasé. 0 si non acheté.
                 yield return CoroutineManager.Instance.StartCoroutine(RestrictLevel(zone.Level + GetMetaUpgrade("start_level"), false, true, true, false));
 
+            // Genèse — Miroir « Vigueur du brouillon » (start_hp) : +4 PV max/niv via
+            // MaxHPBonus, appliqué ICI (APRÈS RestrictLevel, qui remet MaxHPBonus à 0 en
+            // re-levelant le fondateur -> tout bonus posé avant serait lessivé). Sur le
+            // fondateur (leader). 0 si non acheté / hors roguelike (GetMetaUpgrade=0).
+            int genHpLv = GetMetaUpgrade("start_hp");
+            if (genHpLv > 0 && ActiveTeam != null && ActiveTeam.Players.Count > 0)
+            {
+                Character founder = ActiveTeam.Leader;
+                var hpForm = DataManager.Instance.GetMonster(founder.BaseForm.Species).Forms[founder.BaseForm.Form];
+                founder.MaxHPBonus = Math.Min(genHpLv * 4, hpForm.GetMaxStatBonus(Stat.HP));
+            }
+
             BeginSession();
 
             if (recorded)
@@ -1868,18 +1880,11 @@ namespace RogueEssence.Data
             else
                 intrinsic = monsterData.Forms[formIndex].Intrinsic3;
 
-            // Méta « Le Miroir » (Genèse) : « Vigueur du brouillon » (start_hp) = bonus
-            // de PV max au départ (+4 PV/niv via MaxHPBonus, clampé au cap de bonus de
-            // stat de la forme). MaxHPBonus est INDÉPENDANT du niveau -> survit au
-            // rescaling. « Étincelle première » (start_level) n'est PAS appliquée ici :
-            // le niveau du fondateur est ÉCRASÉ par RestrictLevel(zone.Level) à l'entrée
-            // de zone -> le bonus est injecté dans CE cap (RogueProgress.BeginGame).
-            // Sans effet hors roguelike (GetMetaUpgrade renvoie 0). Cf. mirror.lua.
+            // Méta « Le Miroir » (Genèse) : start_level ET start_hp sont appliqués dans
+            // RogueProgress.BeginGame APRÈS RestrictLevel (qui re-level le fondateur ET
+            // remet MaxHPBonus à 0) -> tout effet posé ICI serait lessivé. Cf. mirror.lua.
             Character newChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Starter, formIndex, config.SkinSetting, gender), DataManager.Instance.Start.Level, intrinsic, DataManager.Instance.Start.Personality);
             newChar.Nickname = config.Nickname;
-            int genHpLv = DataManager.Instance.Save.GetMetaUpgrade("start_hp");
-            if (genHpLv > 0)
-                newChar.MaxHPBonus = Math.Min(genHpLv * 4, monsterData.Forms[formIndex].GetMaxStatBonus(Stat.HP));
             // M3: mark the founding duo so partner-aware mechanics (AllyDeathCheck,
             // send-home protection in TeamMenu) can distinguish them from recruits.
             newChar.IsFounder = true;
