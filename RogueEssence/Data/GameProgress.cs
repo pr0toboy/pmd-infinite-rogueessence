@@ -1461,7 +1461,10 @@ namespace RogueEssence.Data
             if (Config != null && Config.MetaResume)
                 StartLevel = zone.Level;
             else
-                yield return CoroutineManager.Instance.StartCoroutine(RestrictLevel(zone.Level, false, true, true, false));
+                // Genèse — Miroir « Étincelle première » (start_level) : le rescaling
+                // roguelike fixe le niveau à zone.Level (=1) ; on l'augmente ici du bonus
+                // méta pour que l'effet ne soit PAS écrasé. 0 si non acheté.
+                yield return CoroutineManager.Instance.StartCoroutine(RestrictLevel(zone.Level + GetMetaUpgrade("start_level"), false, true, true, false));
 
             BeginSession();
 
@@ -1865,20 +1868,18 @@ namespace RogueEssence.Data
             else
                 intrinsic = monsterData.Forms[formIndex].Intrinsic3;
 
-            // Méta « Le Miroir » (Genèse) : améliorations permanentes au départ de run.
-            // « Étincelle première » (start_level) = niveau de départ surclassé (+1/niv).
-            // Sans effet hors roguelike (MetaUpgrades vide => GetMetaUpgrade renvoie 0).
-            // Ids/effets définis dans mirror.lua ; valeurs par niveau alignées avec lui.
-            int genStartLevel = DataManager.Instance.Start.Level + DataManager.Instance.Save.GetMetaUpgrade("start_level");
-            Character newChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Starter, formIndex, config.SkinSetting, gender), genStartLevel, intrinsic, DataManager.Instance.Start.Personality);
+            // Méta « Le Miroir » (Genèse) : « Vigueur du brouillon » (start_hp) = bonus
+            // de PV max au départ (+4 PV/niv via MaxHPBonus, clampé au cap de bonus de
+            // stat de la forme). MaxHPBonus est INDÉPENDANT du niveau -> survit au
+            // rescaling. « Étincelle première » (start_level) n'est PAS appliquée ici :
+            // le niveau du fondateur est ÉCRASÉ par RestrictLevel(zone.Level) à l'entrée
+            // de zone -> le bonus est injecté dans CE cap (RogueProgress.BeginGame).
+            // Sans effet hors roguelike (GetMetaUpgrade renvoie 0). Cf. mirror.lua.
+            Character newChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Starter, formIndex, config.SkinSetting, gender), DataManager.Instance.Start.Level, intrinsic, DataManager.Instance.Start.Personality);
             newChar.Nickname = config.Nickname;
-            // « Vigueur du brouillon » (start_hp) = +5%/niv de PV max (clampé au cap de bonus de stat).
             int genHpLv = DataManager.Instance.Save.GetMetaUpgrade("start_hp");
             if (genHpLv > 0)
-            {
-                int baseHP = monsterData.Forms[formIndex].GetStat(newChar.Level, Stat.HP, 0);
-                newChar.MaxHPBonus = Math.Min(baseHP * (genHpLv * 5) / 100, monsterData.Forms[formIndex].GetMaxStatBonus(Stat.HP));
-            }
+                newChar.MaxHPBonus = Math.Min(genHpLv * 4, monsterData.Forms[formIndex].GetMaxStatBonus(Stat.HP));
             // M3: mark the founding duo so partner-aware mechanics (AllyDeathCheck,
             // send-home protection in TeamMenu) can distinguish them from recruits.
             newChar.IsFounder = true;
@@ -1911,7 +1912,7 @@ namespace RogueEssence.Data
                 else
                     pIntrinsic = pData.Forms[pFormIndex].Intrinsic3;
 
-                Character partnerChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Partner, pFormIndex, config.PartnerSkinSetting ?? DataManager.Instance.DefaultSkin, pGender), genStartLevel, pIntrinsic, DataManager.Instance.Start.Personality);
+                Character partnerChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Partner, pFormIndex, config.PartnerSkinSetting ?? DataManager.Instance.DefaultSkin, pGender), DataManager.Instance.Start.Level, pIntrinsic, DataManager.Instance.Start.Personality);
                 partnerChar.Nickname = config.PartnerNickname;
                 partnerChar.IsFounder = true;
                 partnerChar.IsPartner = true;
