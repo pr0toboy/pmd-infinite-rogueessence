@@ -1395,6 +1395,10 @@ namespace RogueEssence.Script
             if (toadd < 0)
                 toadd = 0;
             DataManager.Instance.Save.MetaCurrency += toadd;
+            // Genèse : méta persistée dans un fichier DÉDIÉ (MetaSave), écrit IMMÉDIATEMENT
+            // à chaque mutation (et NON via la ferry EndGame, sautée faute de MainProgress
+            // en roguelike). Une mort/crash ne perd rien.
+            MetaSave.SaveFrom(DataManager.Instance.Save);
         }
 
         /// <summary>
@@ -1408,6 +1412,7 @@ namespace RogueEssence.Script
             if (DataManager.Instance.Save.MetaCurrency < cost)
                 return false;
             DataManager.Instance.Save.MetaCurrency -= cost;
+            MetaSave.SaveFrom(DataManager.Instance.Save);   // persistance immédiate (Miroir)
             return true;
         }
 
@@ -1431,6 +1436,7 @@ namespace RogueEssence.Script
             if (DataManager.Instance.Save.MetaUpgrades == null)
                 DataManager.Instance.Save.MetaUpgrades = new Dictionary<string, int>();
             DataManager.Instance.Save.MetaUpgrades[id] = level;
+            MetaSave.SaveFrom(DataManager.Instance.Save);   // persistance immédiate (Miroir / StoryProgress)
         }
 
         //===================================

@@ -1550,14 +1550,11 @@ namespace RogueEssence.Data
                             metaSave.RogueCheckpoints[metaZoneID] = Math.Max(prevSeg, curSeg);
                         }
 
-                        // Méta « Genèse » : persister la monnaie + niveaux d'arbre de
-                        // la run morte. La copie de travail (this.MetaCurrency) = le
-                        // total chargé au démarrage + gains de cette run (le routeur
-                        // crédite les Fragments à la mort, AVANT EndGame). Écriture
-                        // directe (pas d'accumulation) : la run possède la valeur le
-                        // temps de la run, le village la possède entre deux runs.
-                        metaSave.MetaCurrency = this.MetaCurrency;
-                        metaSave.MetaUpgrades = new Dictionary<string, int>(this.MetaUpgrades);
+                        // Méta « Genèse » (Fragments + Miroir) : N'EST PLUS ferryée ici.
+                        // Elle vit dans un fichier DÉDIÉ (MetaSave), écrit immédiatement à
+                        // chaque mutation (le routeur crédite les Fragments à la mort AVANT
+                        // EndGame via GAME:AddMetaCurrency, qui écrit déjà le fichier). Cette
+                        // ferry-ci était de toute façon sautée faute de MainProgress.
                     }
 
                     DataManager.Instance.SaveGameState(state);
@@ -1777,6 +1774,15 @@ namespace RogueEssence.Data
             if (roguelike)
             {
                 startSeg = 0;
+                // Genèse : la méta PERMANENTE (Fragments de lumière + niveaux du Miroir)
+                // vient du fichier DÉDIÉ (MetaSave), INDÉPENDANT du MainProgress (absent en
+                // roguelike -> l'ancienne ferry ne marchait pas). Source de vérité ; écrite
+                // immédiatement à chaque mutation (bindings Add/Spend/SetMetaUpgrade).
+                MetaSave.MetaData meta = MetaSave.Load();
+                DataManager.Instance.Save.MetaCurrency = meta.MetaCurrency;
+                DataManager.Instance.Save.MetaUpgrades = new Dictionary<string, int>(meta.MetaUpgrades);
+                // Miroir « Défi du néant » : charge de résurrections de la run = niveau acheté.
+                DataManager.Instance.Save.RunRevivesLeft = DataManager.Instance.Save.GetMetaUpgrade("revive");
                 if (metaMain != null)
                 {
                     DataManager.Instance.Save.ActiveTeam.StoreItems(metaMain.ItemsToStore);
@@ -1786,14 +1792,8 @@ namespace RogueEssence.Data
                     metaMain.StorageToStore.Clear();
                     DataManager.Instance.Save.ActiveTeam.Bank += metaMain.MoneyToStore;
                     metaMain.MoneyToStore = 0;
-                    // Méta « Genèse » : charger le portefeuille permanent (Fragments
-                    // de lumière) + niveaux d'arbre dans la copie de travail de la run.
-                    // L'arbre (entre deux runs, au village = MainProgress) modifie le
-                    // total ; on en repart ici. Ferry inverse à la mort (EndGame).
-                    DataManager.Instance.Save.MetaCurrency = metaMain.MetaCurrency;
-                    DataManager.Instance.Save.MetaUpgrades = new Dictionary<string, int>(metaMain.MetaUpgrades);
-                    // Miroir « Défi du néant » : charge de résurrections de la run = niveau acheté.
-                    DataManager.Instance.Save.RunRevivesLeft = DataManager.Instance.Save.GetMetaUpgrade("revive");
+                    // (La méta Fragments/Miroir est désormais chargée depuis MetaSave
+                    // ci-dessus, plus depuis metaMain — cf. fichier méta dédié.)
                     metaMain.CharsToStore.Clear();   // équipe NON réinjectée : run fraîche
                     if (metaMain.RogueCheckpoints != null)
                         metaMain.RogueCheckpoints.Remove(config.Destination);   // reset checkpoint monotone
