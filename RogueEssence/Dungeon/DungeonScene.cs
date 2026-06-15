@@ -282,6 +282,24 @@ namespace RogueEssence.Dungeon
         {
             if (IsGameOver())
             {
+                // Genèse — Miroir « Défi du néant » (revive) : tant qu'il reste une charge
+                // de résurrection (RunRevivesLeft, posée au run-start par StartRogue), on
+                // RELÈVE le leader sur place (PV pleins) au lieu de terminer la run.
+                // Réutilise le pattern de réveil de ProcessRescue (HP/Dead/DefeatAt +
+                // UpdateExploration). Le leader est déjà placé (mort sur sa case) -> pas
+                // de relocalisation. Hors roguelike : RunRevivesLeft=0 -> no-op.
+                if (DataManager.Instance.Save.RunRevivesLeft > 0)
+                {
+                    DataManager.Instance.Save.RunRevivesLeft--;
+                    Character leader = ZoneManager.Instance.CurrentMap.ActiveTeam.Leader;
+                    leader.HP = leader.MaxHP;
+                    leader.Dead = false;
+                    leader.DefeatAt = "";
+                    ZoneManager.Instance.CurrentMap.UpdateExploration(leader);
+                    LogMsg(String.Format("{0} refuse de se défaire — le brouillon le reforme !", leader.GetDisplayName(true)));
+                    ResetRound();
+                    yield break;
+                }
                 bool allowRescue = true;
                 if (DataManager.Instance.Save.Rescue != null && DataManager.Instance.Save.Rescue.Rescuing)//no rescues allowed when in a rescue mission yourself
                     allowRescue = false;

@@ -188,6 +188,15 @@ namespace RogueEssence.Data
             return MetaUpgrades.TryGetValue(id, out int lv) ? lv : 0;
         }
 
+        /// <summary>
+        /// Genèse — Miroir « Défi du néant » (revive) : nb de résurrections RESTANTES
+        /// pour la run courante. Posé au démarrage de run (StartRogue = GetMetaUpgrade
+        /// "revive") puis décrémenté à chaque résurrection (cf. DungeonScene.ProcessInput).
+        /// Per-run (Save rogue fraîche => repart au plein chaque run), sérialisé (survit
+        /// au quicksave de halte). 0 par défaut / hors roguelike.
+        /// </summary>
+        public int RunRevivesLeft;
+
         public GameProgress()
         {
             GameVersion = new Version();
@@ -1780,6 +1789,8 @@ namespace RogueEssence.Data
                     // total ; on en repart ici. Ferry inverse à la mort (EndGame).
                     DataManager.Instance.Save.MetaCurrency = metaMain.MetaCurrency;
                     DataManager.Instance.Save.MetaUpgrades = new Dictionary<string, int>(metaMain.MetaUpgrades);
+                    // Miroir « Défi du néant » : charge de résurrections de la run = niveau acheté.
+                    DataManager.Instance.Save.RunRevivesLeft = DataManager.Instance.Save.GetMetaUpgrade("revive");
                     metaMain.CharsToStore.Clear();   // équipe NON réinjectée : run fraîche
                     if (metaMain.RogueCheckpoints != null)
                         metaMain.RogueCheckpoints.Remove(config.Destination);   // reset checkpoint monotone
