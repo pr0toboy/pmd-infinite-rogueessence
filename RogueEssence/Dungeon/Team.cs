@@ -485,6 +485,15 @@ namespace RogueEssence.Dungeon
             int slots = MAX_TEAM_SLOTS;
             if (zone != null && zone.TeamSize > -1 && zone.TeamSize < slots)
                 slots = zone.TeamSize;
+            // Genèse (roguelike) : capacité d'équipe de BASE 2, étendue par le Miroir
+            // « Lien élargi » (team_slot, +1/niv jusqu'à MAX_TEAM_SLOTS=4). Sans effet
+            // hors roguelike. Id/effet définis dans mirror.lua.
+            if (DataManager.Instance.Save is RogueProgress)
+            {
+                int metaSlots = 2 + DataManager.Instance.Save.GetMetaUpgrade("team_slot");
+                if (metaSlots < slots)
+                    slots = metaSlots;
+            }
             return slots;
         }
 

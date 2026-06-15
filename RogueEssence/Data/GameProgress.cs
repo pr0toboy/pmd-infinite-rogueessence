@@ -175,6 +175,19 @@ namespace RogueEssence.Data
         public int MetaCurrency;
         public Dictionary<string, int> MetaUpgrades;
 
+        /// <summary>
+        /// Niveau d'une méta-amélioration du Miroir (0 si jamais achetée). Lu par les
+        /// effets C# (StartRogue start_level/start_hp, GetMaxTeam team_slot, …) ET par
+        /// le binding Lua GAME:GetMetaUpgrade. Les ids/effets sont définis dans
+        /// MODS/infinite_starters/.../zone/infinite_dungeon/mirror.lua (catalogue).
+        /// </summary>
+        public int GetMetaUpgrade(string id)
+        {
+            if (MetaUpgrades == null || id == null)
+                return 0;
+            return MetaUpgrades.TryGetValue(id, out int lv) ? lv : 0;
+        }
+
         public GameProgress()
         {
             GameVersion = new Version();
@@ -1841,8 +1854,20 @@ namespace RogueEssence.Data
             else
                 intrinsic = monsterData.Forms[formIndex].Intrinsic3;
 
-            Character newChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Starter, formIndex, config.SkinSetting, gender), DataManager.Instance.Start.Level, intrinsic, DataManager.Instance.Start.Personality);
+            // Méta « Le Miroir » (Genèse) : améliorations permanentes au départ de run.
+            // « Étincelle première » (start_level) = niveau de départ surclassé (+1/niv).
+            // Sans effet hors roguelike (MetaUpgrades vide => GetMetaUpgrade renvoie 0).
+            // Ids/effets définis dans mirror.lua ; valeurs par niveau alignées avec lui.
+            int genStartLevel = DataManager.Instance.Start.Level + DataManager.Instance.Save.GetMetaUpgrade("start_level");
+            Character newChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Starter, formIndex, config.SkinSetting, gender), genStartLevel, intrinsic, DataManager.Instance.Start.Personality);
             newChar.Nickname = config.Nickname;
+            // « Vigueur du brouillon » (start_hp) = +5%/niv de PV max (clampé au cap de bonus de stat).
+            int genHpLv = DataManager.Instance.Save.GetMetaUpgrade("start_hp");
+            if (genHpLv > 0)
+            {
+                int baseHP = monsterData.Forms[formIndex].GetStat(newChar.Level, Stat.HP, 0);
+                newChar.MaxHPBonus = Math.Min(baseHP * (genHpLv * 5) / 100, monsterData.Forms[formIndex].GetMaxStatBonus(Stat.HP));
+            }
             // M3: mark the founding duo so partner-aware mechanics (AllyDeathCheck,
             // send-home protection in TeamMenu) can distinguish them from recruits.
             newChar.IsFounder = true;
@@ -1875,7 +1900,7 @@ namespace RogueEssence.Data
                 else
                     pIntrinsic = pData.Forms[pFormIndex].Intrinsic3;
 
-                Character partnerChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Partner, pFormIndex, config.PartnerSkinSetting ?? DataManager.Instance.DefaultSkin, pGender), DataManager.Instance.Start.Level, pIntrinsic, DataManager.Instance.Start.Personality);
+                Character partnerChar = DataManager.Instance.Save.ActiveTeam.CreatePlayer(MathUtils.Rand, new MonsterID(config.Partner, pFormIndex, config.PartnerSkinSetting ?? DataManager.Instance.DefaultSkin, pGender), genStartLevel, pIntrinsic, DataManager.Instance.Start.Personality);
                 partnerChar.Nickname = config.PartnerNickname;
                 partnerChar.IsFounder = true;
                 partnerChar.IsPartner = true;
