@@ -523,6 +523,29 @@ namespace RogueEssence
             yield return CoroutineManager.Instance.StartCoroutine(FadeIn());
         }
 
+        // Cinématique de fin (v9, EndScene rendue au runtime). Câblage trigger + retour
+        // (le routeur Lua n'expose pas MoveToScene). Entrée : on fond AU NOIR puis on
+        // swappe -> EndScene démarre sur du noir (elle gère son propre fade-in + BGM).
+        public IEnumerator<YieldInstruction> EnterEndCinematic()
+        {
+            yield return CoroutineManager.Instance.StartCoroutine(FadeOut(false));
+            MoveToScene(new EndScene());
+            // Nettoyer le fade noir laissé par le FadeOut (sinon il reste dessiné PAR-DESSUS
+            // EndScene -> écran noir) puis fondre dans la scène A. EndScene gère ses propres
+            // effets internes ensuite ; en fin de chorégraphie elle pose SceneOutcome = EndCinematicReturn().
+            fadeFront.SetFade(false, false);
+            yield return CoroutineManager.Instance.StartCoroutine(FadeIn());
+        }
+
+        // Retour au village SANS cleanup/reInit : la map reste chargée -> l'épilogue
+        // Mikon (flag TrueEnding déjà posé par MaybePlayEnding) part à la ré-entrée.
+        public IEnumerator<YieldInstruction> EndCinematicReturn()
+        {
+            MoveToScene(GroundScene.Instance);
+            fadeFront.SetFade(false, false);
+            yield return CoroutineManager.Instance.StartCoroutine(FadeIn());
+        }
+
 
         public IEnumerator<YieldInstruction> MoveToQuest(ModHeader quest, ModHeader[] mods, List<int> loadOrder)
         {

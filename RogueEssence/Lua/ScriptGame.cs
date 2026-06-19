@@ -217,6 +217,19 @@ namespace RogueEssence.Script
         }
 
         /// <summary>
+        /// Lance la cinématique de fin (EndScene rendue au runtime) puis revient au
+        /// village. Pont car le routeur Lua n'expose pas MoveToScene ; le retour
+        /// (GroundScene + épilogue Mikon) est géré par GameManager.EndCinematicReturn.
+        /// </summary>
+        /// <example>
+        /// GAME:PlayEndCinematic()
+        /// </example>
+        public void PlayEndCinematic()
+        {
+            GameManager.Instance.SceneOutcome = GameManager.Instance.EnterEndCinematic();
+        }
+
+        /// <summary>
         /// Suspend the game from a ground map (quicksave + return to title). Unlike
         /// GroundSave (which writes the MAIN save slot), this suspends the ACTIVE
         /// recording: for a rogue run it writes the rogue quicksave (.rsqs), resumed
