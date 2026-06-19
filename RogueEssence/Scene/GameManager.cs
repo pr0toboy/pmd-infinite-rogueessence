@@ -541,6 +541,14 @@ namespace RogueEssence
         // Mikon (flag TrueEnding déjà posé par MaybePlayEnding) part à la ré-entrée.
         public IEnumerator<YieldInstruction> EndCinematicReturn()
         {
+            // EndScene tient 4 Texture2D (décors nuit/jour + arceus + glow). MoveToScene
+            // n'appelle PAS Exit() sur l'ancienne scène -> on libère explicitement ici, sinon
+            // fuite des 4 textures à chaque visionnage. CurrentScene == EndScene à ce point
+            // (ProcessInput a posé ce SceneOutcome avant le swap), et les deux chemins de
+            // sortie (fin normale ET skip touche) passent par EndCinematicReturn. Exit() est
+            // idempotent (null-guards). Appelé avant MoveToScene : aucun Draw ne s'intercale
+            // (exécution synchrone de la coroutine jusqu'au 1er yield).
+            CurrentScene.Exit();
             MoveToScene(GroundScene.Instance);
             fadeFront.SetFade(false, false);
             yield return CoroutineManager.Instance.StartCoroutine(FadeIn());
